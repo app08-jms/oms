@@ -65,6 +65,7 @@ export interface LockSnapshot {
   p_days: number;
   up_days: number;
   work_days: number;
+  completed_shifts: number;
 }
 
 export function toDateTimeInputValue(iso: string | null): string {
@@ -92,6 +93,11 @@ export function getPeriodRange(period: string): DateRange {
 
 export function formatWorkDays(days: number): string {
   return `${days.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} công`;
+}
+
+export function formatShiftMultiplier(value: number): string {
+  if (value === 0) return '0';
+  return value.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
 }
 
 function shiftMultiplierKey(employeeCode: string, workDate: string): string {
@@ -247,6 +253,7 @@ export function buildLockSnapshots(
       department: employee.department,
       credited_hours: roundHours(employeeRows.reduce((sum, row) => sum + row.creditedHours, 0)),
       work_days: roundHours(employeeRows.reduce((sum, row) => sum + row.workDays, 0)),
+      completed_shifts: employeeRows.filter((row) => row.workedHours !== null).length,
       ot_hours: roundHours(
         employeeRows.reduce((sum, row) => sum + (row.otState === 'approved' ? row.otHours : 0), 0)
       ),

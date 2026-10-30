@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatClockTime, formatWorkDate, formatWorkedDuration } from '@/features/attendance/attendanceRules';
-import { formatHours, type ClosingRow, type PayrollAdjustment } from '@/features/closing/closingRules';
+import { formatHours, formatShiftMultiplier, type ClosingRow, type PayrollAdjustment } from '@/features/closing/closingRules';
 import { EmployeeCell } from '@/features/timesheet/components/EmployeeCell';
 import { TIMESHEET_STATUS_META } from '@/features/timesheet/timesheetRules';
 import { cn } from '@/lib/utils';
@@ -75,7 +75,9 @@ export function ClosingDetailTable({
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium tabular-nums text-[#1F2A30]">{formatWorkDate(record.workDate)}</span>
-                        <span className="text-xs text-[#5C6670]">{record.shiftName}</span>
+                        <Badge variant="outline" className="w-fit border-[#CBD5E1] bg-[#F8FAFC] text-[#334155] tabular-nums">
+                          [{record.shiftName} - {formatShiftMultiplier(row.workDays)}]
+                        </Badge>
                       </div>
                     </TableCell>
                     <TableCell>

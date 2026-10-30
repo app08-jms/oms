@@ -10,7 +10,7 @@ interface ClosingSummaryTableProps {
   isLocked: boolean;
 }
 
-const COLUMN_COUNT = 10;
+const COLUMN_COUNT = 12;
 
 export function ClosingSummaryTable({ summaries, isLoading, isLocked }: ClosingSummaryTableProps) {
   return (
@@ -27,6 +27,8 @@ export function ClosingSummaryTable({ summaries, isLoading, isLocked }: ClosingS
             <TableHead className="text-right text-[#5C6670]">P</TableHead>
             <TableHead className="text-right text-[#5C6670]">UP</TableHead>
             <TableHead className="text-[#5C6670]">Trạng thái chốt</TableHead>
+            <TableHead className="text-right text-[#5C6670]">Số ca hoàn thành</TableHead>
+            <TableHead className="text-right text-[#5C6670]">Tổng công quy đổi</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -65,6 +67,10 @@ export function ClosingSummaryTable({ summaries, isLoading, isLocked }: ClosingS
                     <Lock className="h-3 w-3" />
                     Đã khóa
                   </Badge>
+                </TableCell>
+                <TableCell className="text-right tabular-nums text-[#1F2A30]">{summary.completedShifts}</TableCell>
+                <TableCell className="text-right tabular-nums font-semibold text-[#1F2A30]">
+                  {formatWorkDays(summary.workDays)}
                 </TableCell>
               </TableRow>
             ))}
