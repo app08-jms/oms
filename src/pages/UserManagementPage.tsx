@@ -4,7 +4,9 @@ import { PageHeading } from '@/components/layout/PageHeading';
 import { Button } from '@/components/ui/button';
 import { ConfirmActionDialog } from '@/components/shared/ConfirmActionDialog';
 import { toast } from '@/hooks/use-toast';
-import { LinkProfileDialog, RoleDialog } from '@/features/users/components/AccountActionDialogs';
+import { AccountDetailsDialog } from '@/features/users/components/AccountDetailsDialog';
+import { AccountCredentialsDialog } from '@/features/users/components/AccountCredentialsDialog';
+import { LinkProfileDialog } from '@/features/users/components/AccountActionDialogs';
 import { UserFilterBar } from '@/features/users/components/UserFilterBar';
 import { UserFormDialog } from '@/features/users/components/UserFormDialog';
 import { UserTable } from '@/features/users/components/UserTable';
@@ -25,14 +27,17 @@ import {
   linkAccountToEmployee,
   resetAccountPassword,
   setAccountActive,
-  updateAccountRole,
+  unlinkAccountFromEmployee,
+  updateAccountDetails,
 } from '@/features/users/userService';
 import { useUserAccounts } from '@/features/users/useUserAccounts';
 
 type DialogState =
   | { kind: 'create' }
-  | { kind: 'role'; account: UserAccountRow }
+  | { kind: 'edit'; account: UserAccountRow }
   | { kind: 'link'; account: UserAccountRow }
+  | { kind: 'unlink'; account: UserAccountRow }
+  | { kind: 'credentials'; account: UserAccountRow }
   | { kind: 'reset'; account: UserAccountRow }
   | { kind: 'overrides'; account: UserAccountRow }
   | null;
@@ -75,14 +80,14 @@ export function UserManagementPage() {
     toast({ title: 'Đã tạo tài khoản', description: `Mật khẩu mặc định: ${DEFAULT_ACCOUNT_PASSWORD}` });
   }
 
-  async function handleRoleSave(account: UserAccountRow, role: string) {
+  async function handleDetailsSave(account: UserAccountRow, values: { fullName: string; role: string }) {
     const saved = await catalog.runAction(
-      () => updateAccountRole(account.systemUid, role),
-      'Không thể cập nhật vai trò. Vui lòng thử lại.',
+      () => updateAccountDetails(account.systemUid, values),
+      'Không thể cập nhật thông tin. Vui lòng thử lại.',
     );
     if (!saved) return;
     setDialog(null);
-    toast({ title: 'Đã cập nhật vai trò', description: `Tài khoản ${account.username} đã được cập nhật.` });
+    toast({ title: 'Đã cập nhật thông tin', description: `Tài khoản ${account.username} đã được cập nhật.` });
   }
 
   async function handleLinkSave(account: UserAccountRow, employeeSystemUid: string) {
@@ -93,6 +98,16 @@ export function UserManagementPage() {
     if (!saved) return;
     setDialog(null);
     toast({ title: 'Đã liên kết hồ sơ', description: `Tài khoản ${account.username} đã được liên kết.` });
+  }
+
+  async function handleUnlinkConfirm(account: UserAccountRow) {
+    const saved = await catalog.runAction(
+      () => unlinkAccountFromEmployee(account.systemUid),
+      'Không thể hủy liên kết hồ sơ. Vui lòng thử lại.',
+    );
+    if (!saved) return;
+    setDialog(null);
+    toast({ title: 'Đã hủy liên kết hồ sơ', description: `Tài khoản ${account.username} không còn liên kết với hồ sơ nhân viên.` });
   }
 
   async function handleResetConfirm(account: UserAccountRow) {
@@ -115,6 +130,7 @@ export function UserManagementPage() {
       'Không thể cập nhật trạng thái. Vui lòng thử lại.',
     );
     if (!saved) return;
+    setDialog(null);
     toast({
       title: nextActive ? 'Đã mở khóa tài khoản' : 'Đã khóa tài khoản',
       description: `Tài khoản ${account.username} đang ở trạng thái ${nextActive ? 'hoạt động' : 'đã khóa'}.`,
@@ -172,11 +188,11 @@ export function UserManagementPage() {
           roles={roleList}
           hasAnyAccounts={accounts.length > 0}
           isBusy={catalog.isSaving}
+          onEditDetails={(account) => openDialog({ kind: 'edit', account })}
           onLinkProfile={(account) => openDialog({ kind: 'link', account })}
-          onEditRole={(account) => openDialog({ kind: 'role', account })}
+          onUnlinkProfile={(account) => openDialog({ kind: 'unlink', account })}
+          onManageCredentials={(account) => openDialog({ kind: 'credentials', account })}
           onOverridePermissions={(account) => openDialog({ kind: 'overrides', account })}
-          onResetPassword={(account) => openDialog({ kind: 'reset', account })}
-          onToggleActive={(account) => void handleToggleActive(account)}
         />
       )}
 
@@ -191,14 +207,38 @@ export function UserManagementPage() {
         />
       )}
 
-      {dialog?.kind === 'role' && (
-        <RoleDialog
+      {dialog?.kind === 'edit' && (
+        <AccountDetailsDialog
           account={dialog.account}
           roles={roleList}
           isSaving={catalog.isSaving}
           errorMessage={catalog.actionError}
           onCancel={closeDialog}
-          onSave={(role) => void handleRoleSave(dialog.account, role)}
+          onSave={(values) => void handleDetailsSave(dialog.account, values)}
+        />
+      )}
+
+      {dialog?.kind === 'credentials' && (
+        <AccountCredentialsDialog
+          account={dialog.account}
+          isSaving={catalog.isSaving}
+          errorMessage={catalog.actionError}
+          onCancel={closeDialog}
+          onResetPassword={() => openDialog({ kind: 'reset', account: dialog.account })}
+          onToggleActive={() => void handleToggleActive(dialog.account)}
+        />
+      )}
+
+      {dialog?.kind === 'unlink' && (
+        <ConfirmActionDialog
+          title="Hủy liên kết hồ sơ?"
+          description={`Tài khoản ${dialog.account.username} sẽ không còn liên kết với hồ sơ ${dialog.account.employee?.fullName ?? 'nhân viên'}. Bạn có thể liên kết lại sau.`}
+          confirmLabel="Hủy liên kết"
+          tone="primary"
+          isPending={catalog.isSaving}
+          errorMessage={catalog.actionError}
+          onCancel={closeDialog}
+          onConfirm={() => void handleUnlinkConfirm(dialog.account)}
         />
       )}
 

@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { RoleSummary } from '@/features/permissions/permissionRules';
 import {
   employeeOptionLabel,
   type EmployeeOption,
@@ -12,73 +11,6 @@ import {
 } from '@/features/users/userRules';
 
 const fieldClass = 'h-10 border-[#E2E8F0] bg-white focus-visible:ring-[#4F7284]';
-
-interface RoleDialogProps {
-  account: UserAccountRow;
-  roles: RoleSummary[];
-  isSaving: boolean;
-  errorMessage: string | null;
-  onCancel: () => void;
-  onSave: (role: string) => void;
-}
-
-export function RoleDialog({ account, roles, isSaving, errorMessage, onCancel, onSave }: RoleDialogProps) {
-  const [role, setRole] = useState<string>(account.role);
-
-  return (
-    <Dialog open onOpenChange={(open) => !open && !isSaving && onCancel()}>
-      <DialogContent className="border-[#E2E8F0] bg-white sm:max-w-md sm:rounded-xl">
-        <DialogHeader className="gap-2">
-          <DialogTitle className="text-xl font-semibold text-[#1F2A30]">Sửa vai trò</DialogTitle>
-          <DialogDescription className="text-sm text-[#5C6670]">
-            Cập nhật vai trò cho tài khoản <span className="font-medium text-[#1F2A30]">{account.username}</span>.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="role-select" className="text-sm font-medium text-[#1F2A30]">
-            Vai trò
-          </Label>
-          <Select
-            value={role}
-            onValueChange={setRole}
-          >
-            <SelectTrigger id="role-select" className={fieldClass}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {roles.map((item) => (
-                <SelectItem key={item.key} value={item.key}>
-                  {item.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {errorMessage && (
-          <p role="alert" className="rounded-md border border-error/40 bg-error/5 px-4 py-3 text-sm text-error">
-            {errorMessage}
-          </p>
-        )}
-
-        <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="outline" onClick={onCancel} disabled={isSaving} className="border-[#E2E8F0] text-[#1F2A30]">
-            Hủy
-          </Button>
-          <Button
-            onClick={() => onSave(role)}
-            disabled={isSaving}
-            className="bg-[#4F7284] text-white hover:bg-[#406273]"
-          >
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Lưu vai trò
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 interface LinkProfileDialogProps {
   account: UserAccountRow;

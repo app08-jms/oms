@@ -164,7 +164,9 @@ export async function fetchAttendanceHistory(
 
   const codes = [...new Set(data.map((row) => (isAttendanceRow(row) ? row.employee_code : null)).filter((code): code is string => code !== null))];
   const names = await fetchEmployeeNames(codes);
-  return data.map((row) => toRecord(row, isAttendanceRow(row) ? names.get(row.employee_code) ?? null : null));
+  return data
+    .filter((row) => isAttendanceRow(row) && names.has(row.employee_code))
+    .map((row) => toRecord(row, isAttendanceRow(row) ? names.get(row.employee_code) ?? null : null));
 }
 
 export async function fetchOpenAttendanceRecord(hotelId: string, systemUid: string): Promise<AttendanceRecord | null> {

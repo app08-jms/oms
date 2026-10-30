@@ -122,7 +122,7 @@ export async function resetAccountPassword(systemUid: string): Promise<void> {
 
 async function updateAppUser(
   systemUid: string,
-  values: { role?: string; is_active?: boolean; employee_system_uid?: string },
+  values: { full_name?: string; role?: string; is_active?: boolean; employee_system_uid?: string | null },
   fallback: string,
 ): Promise<void> {
   const { data, error } = await supabase
@@ -134,12 +134,27 @@ async function updateAppUser(
   if (!data?.length) throw new Error(fallback);
 }
 
-export async function updateAccountRole(systemUid: string, role: string): Promise<void> {
-  await updateAppUser(systemUid, { role }, 'Không thể cập nhật vai trò. Vui lòng thử lại.');
-}
-
 export async function setAccountActive(systemUid: string, isActive: boolean): Promise<void> {
   await updateAppUser(systemUid, { is_active: isActive }, 'Không thể cập nhật trạng thái. Vui lòng thử lại.');
+}
+
+export async function updateAccountDetails(
+  systemUid: string,
+  values: { fullName: string; role: string },
+): Promise<void> {
+  await updateAppUser(
+    systemUid,
+    { full_name: values.fullName, role: values.role },
+    'Không thể cập nhật thông tin tài khoản. Vui lòng thử lại.',
+  );
+}
+
+export async function unlinkAccountFromEmployee(systemUid: string): Promise<void> {
+  await updateAppUser(
+    systemUid,
+    { employee_system_uid: null },
+    'Không thể hủy liên kết hồ sơ. Vui lòng thử lại.',
+  );
 }
 
 export async function linkAccountToEmployee(systemUid: string, employeeSystemUid: string): Promise<void> {

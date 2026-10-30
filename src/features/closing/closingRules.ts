@@ -140,6 +140,7 @@ export function buildClosingRows(
   const adjustmentsByRecord = groupAdjustmentsByRecord(adjustments);
 
   return records
+    .filter((record) => employeeByCode.has(record.employeeCode))
     .map((record) => {
       const workedMs = getWorkedMs(record);
       const workedHours = workedMs === null ? null : workedMs / HOUR_MS;
