@@ -1,6 +1,8 @@
 import { useId } from 'react';
 
-export function Logo() {
+import { cn } from '@/lib/utils';
+
+export function Logo({ className = 'h-8 w-8' }: { className?: string }) {
   const uid = useId().replace(/:/g, '');
   const jGrad = `${uid}-j-grad`;
   const barGrad = `${uid}-bar-grad`;
@@ -8,7 +10,7 @@ export function Logo() {
   return (
     <svg
       viewBox="0 0 100 100"
-      className="w-8 h-8 flex-shrink-0"
+      className={cn('flex-shrink-0', className)}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"

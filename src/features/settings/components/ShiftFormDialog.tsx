@@ -4,10 +4,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   calculateStandardHours,
   formatBreakMinutes,
+  formatHeSoCong,
   formatStandardHours,
+  HE_SO_CONG_OPTIONS,
   normalizeShiftDraft,
   validateShiftDraft,
   type ShiftDraft,
@@ -103,6 +106,20 @@ export function ShiftFormDialog({
                 placeholder="VD: Ca sáng"
                 className={fieldClass}
               />
+            </Field>
+            <Field label="Hệ số công" htmlFor="shift-he-so-cong">
+              <Select value={draft.heSoCong} onValueChange={(value) => update('heSoCong', value)}>
+                <SelectTrigger id="shift-he-so-cong" className={fieldClass}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {HE_SO_CONG_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {formatHeSoCong(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
           </div>
 

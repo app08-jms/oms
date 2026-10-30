@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   calculateStandardHours,
   formatBreakMinutes,
+  formatHeSoCong,
   formatShiftTime,
   formatStandardHours,
   type ShiftType,
@@ -19,7 +20,7 @@ interface ShiftTableProps {
   onDelete: (shift: ShiftType) => void;
 }
 
-const COLUMN_COUNT = 8;
+const COLUMN_COUNT = 9;
 const HEAD_CLASS = 'whitespace-nowrap text-[#5C6670]';
 
 export function ShiftTable({ rows, isLoading, isSaving, onEdit, onDelete }: ShiftTableProps) {
@@ -35,6 +36,7 @@ export function ShiftTable({ rows, isLoading, isSaving, onEdit, onDelete }: Shif
               <TableHead className={HEAD_CLASS}>Trạng thái ca</TableHead>
               <TableHead className={HEAD_CLASS}>Thời gian làm việc</TableHead>
               <TableHead className={HEAD_CLASS}>Thời gian nghỉ</TableHead>
+              <TableHead className={HEAD_CLASS}>Hệ số công</TableHead>
               <TableHead className={HEAD_CLASS}>Tổng giờ làm chuẩn</TableHead>
               <TableHead className={cn('text-right', HEAD_CLASS)}>Thao tác</TableHead>
             </TableRow>
@@ -90,6 +92,9 @@ export function ShiftTable({ rows, isLoading, isSaving, onEdit, onDelete }: Shif
                     </TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums text-[#1F2A30]">
                       {formatBreakMinutes(breakMinutes)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap font-medium tabular-nums text-[#1F2A30]">
+                      {formatHeSoCong(shift.heSoCong)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap font-medium tabular-nums text-[#1F2A30]">
                       {formatStandardHours(hours)}

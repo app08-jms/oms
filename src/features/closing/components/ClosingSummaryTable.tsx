@@ -2,18 +2,17 @@ import { Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { LockedSummary } from '@/features/closing/closingService';
-import { formatCredit, formatHours } from '@/features/closing/closingRules';
+import { formatHours, formatWorkDays } from '@/features/closing/closingRules';
 
 interface ClosingSummaryTableProps {
   summaries: LockedSummary[];
   isLoading: boolean;
   isLocked: boolean;
-  standardShiftHours: number;
 }
 
 const COLUMN_COUNT = 10;
 
-export function ClosingSummaryTable({ summaries, isLoading, isLocked, standardShiftHours }: ClosingSummaryTableProps) {
+export function ClosingSummaryTable({ summaries, isLoading, isLocked }: ClosingSummaryTableProps) {
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -53,7 +52,7 @@ export function ClosingSummaryTable({ summaries, isLoading, isLocked, standardSh
                 <TableCell className="text-[#1F2A30]">{summary.fullName}</TableCell>
                 <TableCell className="text-[#5C6670]">{summary.department}</TableCell>
                 <TableCell className="text-right tabular-nums text-[#1F2A30]">
-                  {formatCredit(summary.creditedHours, standardShiftHours)}
+                  {formatWorkDays(summary.workDays)}
                 </TableCell>
                 <TableCell className="text-right tabular-nums text-[#1F2A30]">
                   {summary.otHours > 0 ? formatHours(summary.otHours) : '--'}

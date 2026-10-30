@@ -8,6 +8,7 @@ import {
   buildClosingKpis,
   buildClosingRows,
   buildLockSnapshots,
+  buildShiftMultiplierMap,
   getPeriodRange,
   type ClosingFilters,
   type ClosingRow,
@@ -27,6 +28,8 @@ import {
 } from '@/features/closing/closingService';
 import { fetchEmployees, fetchSchedules } from '@/features/schedule/scheduleService';
 import type { Employee, ScheduleEntry } from '@/features/schedule/scheduleRules';
+import { fetchShiftTypes } from '@/features/settings/settingsService';
+import type { ShiftType } from '@/features/settings/settingsRules';
 
 const RECONCILING: PayrollPeriod = { status: 'reconciling', deadline: null, lockedAt: null };
 
@@ -34,6 +37,7 @@ interface PeriodData {
   records: AttendanceRecord[];
   employees: Employee[];
   schedules: ScheduleEntry[];
+  shiftTypes: ShiftType[];
   adjustments: PayrollAdjustment[];
   period: PayrollPeriod;
   summaries: LockedSummary[];
@@ -53,10 +57,11 @@ export function useClosing(period: string, filters: ClosingFilters) {
     setIsLoading(true);
     const range = getPeriodRange(period);
     try {
-      const [records, employees, schedules, adjustments, payrollPeriod, summaries] = await Promise.all([
+      const [records, employees, schedules, shiftTypes, adjustments, payrollPeriod, summaries] = await Promise.all([
         fetchAttendanceHistory(hotelId, { kind: 'hotel' }, range),
         fetchEmployees(),
         fetchSchedules(range.from ?? period, range.to ?? period),
+        fetchShiftTypes(),
         fetchPayrollAdjustments(range.from ?? period, range.to ?? period),
         fetchPayrollPeriod(period),
         fetchLockedSummaries(period),
@@ -65,6 +70,7 @@ export function useClosing(period: string, filters: ClosingFilters) {
         records,
         employees,
         schedules,
+        shiftTypes,
         adjustments,
         period: payrollPeriod ?? RECONCILING,
         summaries,
@@ -84,7 +90,13 @@ export function useClosing(period: string, filters: ClosingFilters) {
   const allRows = useMemo(
     () =>
       data
-        ? buildClosingRows(data.records, data.employees, data.adjustments, standardShiftHours)
+        ? buildClosingRows(
+            data.records,
+            data.employees,
+            data.adjustments,
+            standardShiftHours,
+            buildShiftMultiplierMap(data.schedules, data.shiftTypes)
+          )
         : null,
     [data, standardShiftHours]
   );
@@ -128,7 +140,6 @@ export function useClosing(period: string, filters: ClosingFilters) {
     totalRowCount: allRows?.length ?? 0,
     kpis,
     summaries: data?.summaries ?? [],
-    standardShiftHours,
     period: data?.period ?? RECONCILING,
     isLocked: Boolean(isLocked),
     isLoading,

@@ -9,9 +9,11 @@ import {
   type DateRange,
 } from '@/features/attendance/attendanceRules';
 import type { Employee, ScheduleEntry } from '@/features/schedule/scheduleRules';
+import type { ShiftType } from '@/features/settings/settingsRules';
 import { getTimesheetStatus, type TimesheetStatus } from '@/features/timesheet/timesheetRules';
 
 const HOUR_MS = 3_600_000;
+const DEFAULT_HE_SO_CONG = 1;
 
 export type OvertimeState = 'none' | 'pending' | 'approved' | 'rejected';
 
@@ -35,6 +37,7 @@ export interface ClosingRow {
   otHours: number;
   otState: OvertimeState;
   creditedHours: number;
+  workDays: number;
   isTimingIssue: boolean;
   status: TimesheetStatus;
   adjustments: PayrollAdjustment[];
@@ -42,7 +45,7 @@ export interface ClosingRow {
 }
 
 export interface ClosingKpis {
-  creditedHours: number;
+  workDays: number;
   timingIssueCount: number;
   approvedOtHours: number;
   pendingOtCount: number;
@@ -61,6 +64,7 @@ export interface LockSnapshot {
   off_days: number;
   p_days: number;
   up_days: number;
+  work_days: number;
 }
 
 export function toDateTimeInputValue(iso: string | null): string {
@@ -86,8 +90,22 @@ export function getPeriodRange(period: string): DateRange {
   };
 }
 
-export function formatCredit(hours: number, standardShiftHours: number): string {
-  return `${(hours / standardShiftHours).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} công`;
+export function formatWorkDays(days: number): string {
+  return `${days.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} công`;
+}
+
+function shiftMultiplierKey(employeeCode: string, workDate: string): string {
+  return `${employeeCode}|${workDate}`;
+}
+
+export function buildShiftMultiplierMap(schedules: ScheduleEntry[], shiftTypes: ShiftType[]): Map<string, number> {
+  const heSoByCode = new Map(shiftTypes.map((shift) => [shift.code, shift.heSoCong]));
+  return new Map(
+    schedules.map((entry) => [
+      shiftMultiplierKey(entry.employeeCode, entry.workDate),
+      heSoByCode.get(entry.shiftCode) ?? DEFAULT_HE_SO_CONG,
+    ])
+  );
 }
 
 export function formatHours(hours: number): string {
@@ -115,7 +133,8 @@ export function buildClosingRows(
   records: AttendanceRecord[],
   employees: Employee[],
   adjustments: PayrollAdjustment[],
-  standardShiftHours: number
+  standardShiftHours: number,
+  shiftMultipliers: Map<string, number>
 ): ClosingRow[] {
   const employeeByCode = new Map(employees.map((employee) => [employee.code, employee]));
   const adjustmentsByRecord = groupAdjustmentsByRecord(adjustments);
@@ -134,6 +153,10 @@ export function buildClosingRows(
             : workedHours;
       const { lateMinutes, earlyMinutes } = getCheckTiming(record);
       const recordAdjustments = adjustmentsByRecord.get(record.id) ?? [];
+      const workDays =
+        workedHours === null
+          ? 0
+          : (shiftMultipliers.get(shiftMultiplierKey(record.employeeCode, record.workDate)) ?? DEFAULT_HE_SO_CONG);
 
       return {
         record,
@@ -142,6 +165,7 @@ export function buildClosingRows(
         otHours,
         otState,
         creditedHours,
+        workDays,
         isTimingIssue: lateMinutes > LATE_TOLERANCE_MINUTES || (earlyMinutes ?? 0) > LATE_TOLERANCE_MINUTES,
         status: getTimesheetStatus(record),
         adjustments: recordAdjustments,
@@ -198,7 +222,7 @@ function countShift(schedules: ScheduleEntry[], shiftCode: string, employeeCode?
 
 export function buildClosingKpis(rows: ClosingRow[], schedules: ScheduleEntry[]): ClosingKpis {
   return {
-    creditedHours: rows.reduce((sum, row) => sum + row.creditedHours, 0),
+    workDays: rows.reduce((sum, row) => sum + row.workDays, 0),
     timingIssueCount: rows.filter((row) => row.isTimingIssue).length,
     approvedOtHours: rows.reduce((sum, row) => sum + (row.otState === 'approved' ? row.otHours : 0), 0),
     pendingOtCount: rows.filter((row) => row.otState === 'pending').length,
@@ -221,6 +245,7 @@ export function buildLockSnapshots(
       full_name: employee.fullName,
       department: employee.department,
       credited_hours: roundHours(employeeRows.reduce((sum, row) => sum + row.creditedHours, 0)),
+      work_days: roundHours(employeeRows.reduce((sum, row) => sum + row.workDays, 0)),
       ot_hours: roundHours(
         employeeRows.reduce((sum, row) => sum + (row.otState === 'approved' ? row.otHours : 0), 0)
       ),

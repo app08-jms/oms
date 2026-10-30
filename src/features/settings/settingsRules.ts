@@ -10,6 +10,8 @@ export interface Position {
   name: string;
 }
 
+export const HE_SO_CONG_OPTIONS = [0, 0.5, 1, 1.5, 2, 3] as const;
+
 export interface ShiftType {
   code: string;
   name: string;
@@ -17,6 +19,7 @@ export interface ShiftType {
   startTime: string | null;
   endTime: string | null;
   breakMinutes: number;
+  heSoCong: number;
   sortOrder: number;
 }
 
@@ -27,6 +30,7 @@ export interface ShiftDraft {
   startTime: string;
   endTime: string;
   breakMinutes: string;
+  heSoCong: string;
 }
 
 export const MAX_NAME_LENGTH = 80;
@@ -35,7 +39,7 @@ const MINUTES_PER_DAY = 24 * 60;
 const MAX_BREAK_MINUTES = 720;
 
 export function createEmptyShiftDraft(): ShiftDraft {
-  return { code: '', name: '', isWorking: true, startTime: '08:00', endTime: '17:00', breakMinutes: '60' };
+  return { code: '', name: '', isWorking: true, startTime: '08:00', endTime: '17:00', breakMinutes: '60', heSoCong: '1' };
 }
 
 export function shiftDraftFromType(shift: ShiftType): ShiftDraft {
@@ -46,7 +50,12 @@ export function shiftDraftFromType(shift: ShiftType): ShiftDraft {
     startTime: shift.startTime ?? '',
     endTime: shift.endTime ?? '',
     breakMinutes: String(shift.breakMinutes),
+    heSoCong: String(shift.heSoCong),
   };
+}
+
+export function formatHeSoCong(value: number): string {
+  return Number.isInteger(value) ? value.toFixed(1) : String(value);
 }
 
 export function normalizeShiftDraft(draft: ShiftDraft): ShiftDraft {
@@ -117,6 +126,11 @@ export function validateShiftDraft(draft: ShiftDraft, takenCodes: Set<string>, i
   const breakMinutes = parseBreakMinutes(normalized.breakMinutes);
   if (breakMinutes === null || breakMinutes > MAX_BREAK_MINUTES) {
     return `Thời gian nghỉ giữa ca phải là số phút từ 0 đến ${MAX_BREAK_MINUTES}.`;
+  }
+
+  const heSoCong = Number(normalized.heSoCong);
+  if (!(HE_SO_CONG_OPTIONS as readonly number[]).includes(heSoCong)) {
+    return 'Hệ số công phải là 0, 0.5, 1, 1.5, 2 hoặc 3.';
   }
 
   if (normalized.isWorking) {

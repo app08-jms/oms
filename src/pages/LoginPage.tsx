@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Eye, EyeOff, Hotel, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader as Loader2 } from 'lucide-react';
 import { HotelPickerDialog } from '@/features/auth/components/HotelPickerDialog';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { requiresHotelPicker, type AuthAccount, type HotelRef } from '@/features/auth/authRules';
@@ -8,6 +8,7 @@ import { endAuthSession, fetchAccountHotels, signInWithUsername } from '@/featur
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Logo } from '@/components/layout/Logo';
 
 interface PendingLogin {
   account: AuthAccount;
@@ -56,10 +57,10 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC] px-4 py-12">
-      <div className="w-full max-w-sm rounded-2xl border border-[#E2E8F0] bg-white p-8 shadow-[0_12px_32px_-12px_rgba(15,23,42,0.12)] sm:p-10">
+      <div className="w-full max-w-sm rounded-2xl border border-[#E2E8F0] bg-white p-8 shadow-lg sm:p-10">
         <div className="mb-8 flex flex-col items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#4F7284] text-white shadow-sm">
-            <Hotel className="h-7 w-7" aria-hidden="true" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+            <Logo className="h-10 w-10" />
           </div>
           <h1 className="text-2xl font-bold leading-[1.2] text-[#4F7284]">OMS by Jenius</h1>
         </div>
@@ -115,7 +116,7 @@ export function LoginPage() {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="h-11 w-full bg-[#4F7284] text-white transition-colors duration-200 hover:bg-[#3F5C6C]"
+            className="h-11 w-full rounded-lg bg-[#4F7284] text-base font-semibold text-white shadow-sm transition-all duration-200 hover:bg-[#3F5C6C] hover:shadow-md active:scale-[0.99] disabled:opacity-70"
           >
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : null}
             Đăng nhập

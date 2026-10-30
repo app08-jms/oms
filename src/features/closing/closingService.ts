@@ -13,6 +13,7 @@ export interface LockedSummary {
   fullName: string;
   department: string;
   creditedHours: number;
+  workDays: number;
   otHours: number;
   offDays: number;
   pDays: number;
@@ -43,6 +44,7 @@ interface SummaryRow {
   full_name: string;
   department: string;
   credited_hours: number | string;
+  work_days: number | string;
   ot_hours: number | string;
   off_days: number;
   p_days: number;
@@ -99,7 +101,7 @@ export async function fetchPayrollAdjustments(from: string, to: string): Promise
 export async function fetchLockedSummaries(period: string): Promise<LockedSummary[]> {
   const { data, error } = await supabase
     .from('payroll_locked_summaries')
-    .select('employee_code, full_name, department, credited_hours, ot_hours, off_days, p_days, up_days')
+    .select('employee_code, full_name, department, credited_hours, work_days, ot_hours, off_days, p_days, up_days')
     .eq('period_month', period)
     .order('full_name', { ascending: true });
 
@@ -109,6 +111,7 @@ export async function fetchLockedSummaries(period: string): Promise<LockedSummar
     fullName: row.full_name,
     department: row.department,
     creditedHours: Number(row.credited_hours),
+    workDays: Number(row.work_days),
     otHours: Number(row.ot_hours),
     offDays: row.off_days,
     pDays: row.p_days,

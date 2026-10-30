@@ -29,6 +29,7 @@ interface ShiftRow {
   start_time: string | null;
   end_time: string | null;
   break_minutes: number;
+  he_so_cong: number;
   sort_order: number;
 }
 
@@ -59,6 +60,7 @@ function isShiftRow(value: unknown): value is ShiftRow {
     typeof row.name === 'string' &&
     typeof row.is_working === 'boolean' &&
     typeof row.break_minutes === 'number' &&
+    typeof row.he_so_cong === 'number' &&
     typeof row.sort_order === 'number'
   );
 }
@@ -153,7 +155,7 @@ export async function deletePosition(department: Department, position: Position)
 export async function fetchShiftTypes(): Promise<ShiftType[]> {
   const { data, error } = await supabase
     .from('shift_types')
-    .select('code, name, is_working, start_time, end_time, break_minutes, sort_order')
+    .select('code, name, is_working, start_time, end_time, break_minutes, he_so_cong, sort_order')
     .order('sort_order', { ascending: true });
   if (error) throw error;
 
@@ -164,6 +166,7 @@ export async function fetchShiftTypes(): Promise<ShiftType[]> {
     startTime: row.start_time,
     endTime: row.end_time,
     breakMinutes: row.break_minutes,
+    heSoCong: row.he_so_cong,
     sortOrder: row.sort_order,
   }));
 }
@@ -176,6 +179,7 @@ function toShiftPayload(draft: ShiftDraft) {
     start_time: values.isWorking ? values.startTime : null,
     end_time: values.isWorking ? values.endTime : null,
     break_minutes: Number(values.breakMinutes),
+    he_so_cong: Number(values.heSoCong),
   };
 }
 

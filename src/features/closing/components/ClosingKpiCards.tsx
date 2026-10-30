@@ -1,17 +1,16 @@
 import { Badge } from '@/components/ui/badge';
-import { formatCredit, formatHours, type ClosingKpis } from '@/features/closing/closingRules';
+import { formatHours, formatWorkDays, type ClosingKpis } from '@/features/closing/closingRules';
 
 interface ClosingKpiCardsProps {
   kpis: ClosingKpis | null;
   isLoading: boolean;
-  standardShiftHours: number;
 }
 
-export function ClosingKpiCards({ kpis, isLoading, standardShiftHours }: ClosingKpiCardsProps) {
+export function ClosingKpiCards({ kpis, isLoading }: ClosingKpiCardsProps) {
   const display = (format: (values: ClosingKpis) => string) => (kpis && !isLoading ? format(kpis) : '--');
 
   const cards = [
-    { label: 'Tổng công đã ghi nhận', value: display((k) => formatCredit(k.creditedHours, standardShiftHours)) },
+    { label: 'Tổng công đã ghi nhận', value: display((k) => formatWorkDays(k.workDays)) },
     { label: 'Đi trễ / Về sớm', value: display((k) => `${k.timingIssueCount} lượt`) },
     {
       label: 'Tăng ca (OT) đã duyệt',
