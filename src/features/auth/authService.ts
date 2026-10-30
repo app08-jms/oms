@@ -164,6 +164,11 @@ export async function changeOwnPassword(username: string, current: string, next:
   if (verifyError) throw new Error('Mật khẩu hiện tại không đúng.');
 
   const { error } = await supabase.auth.updateUser({ password: next });
-  if (error) throw new Error('Không thể cập nhật mật khẩu. Vui lòng thử lại.');
+  if (!error) return;
+  if (error.code === 'weak_password') {
+    throw new Error('Mật khẩu mới chưa đủ mạnh. Hãy dùng mật khẩu dài hơn hoặc khó đoán hơn.');
+  }
+  if (error.code === 'same_password') throw new Error('Mật khẩu mới phải khác mật khẩu hiện tại.');
+  throw new Error('Không thể cập nhật mật khẩu. Vui lòng thử lại.');
 }
 
