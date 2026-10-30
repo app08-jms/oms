@@ -44,7 +44,7 @@ export function EmployeeTable({ rows, isLoading, isSaving, emptyMessage, onEdit,
             <TableHead className={HEAD_CLASS}>Trạng thái làm việc</TableHead>
             <TableHead className={HEAD_CLASS}>SĐT & Email</TableHead>
             <TableHead className={HEAD_CLASS}>Theo dõi phép</TableHead>
-            <TableHead className={HEAD_CLASS}>Tài khoản</TableHead>
+            <TableHead className={HEAD_CLASS}>Trạng thái liên kết</TableHead>
             <TableHead className={cn('text-right', HEAD_CLASS)}>Thao tác</TableHead>
           </TableRow>
         </TableHeader>
@@ -111,13 +111,13 @@ export function EmployeeTable({ rows, isLoading, isSaving, emptyMessage, onEdit,
                   </div>
                 </TableCell>
                 <TableCell>
-                  {profile.hasAccount ? (
+                  {profile.appUserSystemUid !== null ? (
                     <Badge className="whitespace-nowrap border-transparent bg-success/10 px-2.5 py-0.5 font-medium text-success hover:bg-success/10">
-                      Đã liên kết
+                      Đã liên kết tài khoản
                     </Badge>
                   ) : (
                     <Badge className="whitespace-nowrap border-[#E2E8F0] bg-[#F1F5F9] px-2.5 py-0.5 font-medium text-[#5C6670] hover:bg-[#F1F5F9]">
-                      Chưa tạo
+                      Chưa liên kết tài khoản
                     </Badge>
                   )}
                 </TableCell>

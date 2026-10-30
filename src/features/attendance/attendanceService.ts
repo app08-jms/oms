@@ -119,7 +119,11 @@ function toRecord(row: unknown, employeeName: string | null): AttendanceRecord {
 async function fetchEmployeeNames(codes: string[]): Promise<Map<string, string>> {
   const names = new Map<string, string>();
   if (codes.length === 0) return names;
-  const { data, error } = await supabase.from('employees').select('code, full_name').in('code', codes);
+  const { data, error } = await supabase
+    .from('employees')
+    .select('code, full_name')
+    .not('app_user_system_uid', 'is', null)
+    .in('code', codes);
   if (error) throw error;
   if (!Array.isArray(data)) throw new Error(LOAD_ERROR);
   for (const item of data as { code: unknown; full_name: unknown }[]) {
@@ -130,7 +134,11 @@ async function fetchEmployeeNames(codes: string[]): Promise<Map<string, string>>
 
 async function fetchDepartmentEmployeeCodes(departments: string[]): Promise<string[]> {
   if (departments.length === 0) return [];
-  const { data, error } = await supabase.from('employees').select('code').in('department', departments);
+  const { data, error } = await supabase
+    .from('employees')
+    .select('code')
+    .not('app_user_system_uid', 'is', null)
+    .in('department', departments);
   if (error) throw error;
   if (!Array.isArray(data)) throw new Error(LOAD_ERROR);
   return (data as { code: unknown }[]).flatMap((item) => (typeof item.code === 'string' ? [item.code] : []));

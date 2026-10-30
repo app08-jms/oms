@@ -8,7 +8,7 @@ import {
 } from '@/features/employees/employeeRules';
 
 const PROFILE_COLUMNS =
-  'code, full_name, display_name, department, position, probation_date, official_date, employment_status, phone, email, has_account, leave_tracking, initial_leave_days';
+  'code, full_name, display_name, department, position, probation_date, official_date, employment_status, phone, email, has_account, app_user_system_uid, leave_tracking, initial_leave_days';
 
 const DUPLICATE_CODE_MESSAGE = 'Mã NV đã tồn tại trong danh sách.';
 
@@ -24,6 +24,7 @@ interface EmployeeProfileRow {
   phone: string | null;
   email: string | null;
   has_account: boolean;
+  app_user_system_uid: string | null;
   leave_tracking: boolean;
   initial_leave_days: number;
 }
@@ -59,6 +60,7 @@ function toProfile(row: EmployeeProfileRow): EmployeeProfile {
     phone: row.phone ?? '',
     email: row.email ?? '',
     hasAccount: row.has_account,
+    appUserSystemUid: row.app_user_system_uid,
     leaveTracking: row.leave_tracking,
     initialLeaveDays: row.initial_leave_days,
   };

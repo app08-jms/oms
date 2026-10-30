@@ -26,6 +26,7 @@ export interface EmployeeProfile {
   phone: string;
   email: string;
   hasAccount: boolean;
+  appUserSystemUid: string | null;
   leaveTracking: boolean;
   initialLeaveDays: number;
 }
@@ -134,8 +135,8 @@ export function applyEmployeeFilters(profiles: EmployeeProfile[], filters: Emplo
   const query = normalizeSearchText(filters.search);
   return profiles.filter((profile) => {
     if (filters.department !== 'all' && profile.department !== filters.department) return false;
-    if (filters.account === 'linked' && !profile.hasAccount) return false;
-    if (filters.account === 'unlinked' && profile.hasAccount) return false;
+    if (filters.account === 'linked' && profile.appUserSystemUid === null) return false;
+    if (filters.account === 'unlinked' && profile.appUserSystemUid !== null) return false;
     if (filters.employmentStatus !== 'all' && profile.employmentStatus !== filters.employmentStatus) return false;
     if (!query) return true;
     return [profile.code, profile.fullName, profile.displayName, profile.phone, profile.email].some((value) =>

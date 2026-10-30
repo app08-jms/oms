@@ -67,6 +67,7 @@ export async function fetchEmployees(): Promise<Employee[]> {
   const { data, error } = await supabase
     .from('employees')
     .select('code, full_name, department, position')
+    .not('app_user_system_uid', 'is', null)
     .order('code', { ascending: true });
 
   if (error) throw error;
