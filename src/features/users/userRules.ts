@@ -44,12 +44,6 @@ export interface NewAccountDraft {
   role: string;
 }
 
-export const ACCOUNT_ROLE_OPTIONS = [
-  { key: 'super_admin', label: 'Super Admin' },
-  { key: 'admin', label: 'Hotel Admin' },
-  { key: 'staff', label: 'Staff' },
-];
-
 export function createEmptyAccountDraft(hotelId: string): NewAccountDraft {
   return { employeeSystemUid: '', hotelId, username: '', fullName: '', role: DEFAULT_ROLE_KEY };
 }

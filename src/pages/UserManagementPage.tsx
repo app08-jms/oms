@@ -12,7 +12,7 @@ import { UserFormDialog } from '@/features/users/components/UserFormDialog';
 import { UserTable } from '@/features/users/components/UserTable';
 import { useAuth, useViewerRole } from '@/features/auth/AuthProvider';
 import { UserOverrideDialog } from '@/features/permissions/components/UserOverrideDialog';
-import { SUPER_ADMIN_ROLE_KEY, canViewerSeeRole, filterRolesForViewer } from '@/features/permissions/permissionRules';
+import { SUPER_ADMIN_ROLE_KEY, canViewerCreateRole, canViewerSeeRole, filterRolesForViewer } from '@/features/permissions/permissionRules';
 import { useRoles } from '@/features/permissions/useRoles';
 import {
   DEFAULT_ACCOUNT_PASSWORD,
@@ -50,6 +50,8 @@ export function UserManagementPage() {
   const roleList = filterRolesForViewer(roles.data ?? [], activeRoleKey);
   const isSuperAdmin = session?.account.roleKey === SUPER_ADMIN_ROLE_KEY;
   const hotelOptions = isSuperAdmin ? catalog.data?.hotels ?? [] : session ? [session.hotel] : [];
+  const creatorRoleKey = session?.account.roleKey ?? '';
+  const creatableRoles = (roles.data ?? []).filter((role) => canViewerCreateRole(creatorRoleKey, role.key));
   const [filters, setFilters] = useState<UserFilters>(DEFAULT_USER_FILTERS);
   const [dialog, setDialog] = useState<DialogState>(null);
 
@@ -212,7 +214,7 @@ export function UserManagementPage() {
           unlinkedEmployees={unlinkedEmployees}
           hotels={hotelOptions}
           hotelLocked={!isSuperAdmin}
-          viewerRoleKey={activeRoleKey}
+          roles={creatableRoles}
           isSaving={catalog.isSaving}
           errorMessage={catalog.actionError}
           onCancel={closeDialog}

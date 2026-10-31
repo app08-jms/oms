@@ -6,9 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type HotelRef } from '@/features/auth/authRules';
-import { canViewerSeeRole } from '@/features/permissions/permissionRules';
+import { type RoleSummary } from '@/features/permissions/permissionRules';
 import {
-  ACCOUNT_ROLE_OPTIONS,
   DEFAULT_ACCOUNT_PASSWORD,
   createEmptyAccountDraft,
   employeeOptionLabel,
@@ -24,7 +23,7 @@ interface UserFormDialogProps {
   unlinkedEmployees: EmployeeOption[];
   hotels: HotelRef[];
   hotelLocked: boolean;
-  viewerRoleKey: string;
+  roles: RoleSummary[];
   isSaving: boolean;
   errorMessage: string | null;
   onCancel: () => void;
@@ -35,7 +34,7 @@ export function UserFormDialog({
   unlinkedEmployees,
   hotels,
   hotelLocked,
-  viewerRoleKey,
+  roles,
   isSaving,
   errorMessage,
   onCancel,
@@ -44,7 +43,6 @@ export function UserFormDialog({
   const [draft, setDraft] = useState<NewAccountDraft>(() => createEmptyAccountDraft(hotelLocked ? hotels[0]?.id ?? '' : ''));
   const [validationError, setValidationError] = useState<string | null>(null);
   const isLinked = draft.employeeSystemUid !== '';
-  const roleOptions = ACCOUNT_ROLE_OPTIONS.filter((option) => canViewerSeeRole(viewerRoleKey, option.key));
   const lockedHotel = hotelLocked ? hotels[0] ?? null : null;
 
   function handleProfileChange(value: string) {
@@ -165,9 +163,9 @@ export function UserFormDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {roleOptions.map((option) => (
-                    <SelectItem key={option.key} value={option.key}>
-                      {option.label}
+                  {roles.map((role) => (
+                    <SelectItem key={role.key} value={role.key}>
+                      {role.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
