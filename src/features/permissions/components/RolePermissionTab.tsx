@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { useCatalogResource } from '@/hooks/useCatalogResource';
-import { useViewerRole } from '@/features/auth/AuthProvider';
+import { useAuth, useViewerRole } from '@/features/auth/AuthProvider';
 import { PermissionMatrix } from '@/features/permissions/components/PermissionMatrix';
 import {
   DATA_SCOPE_LABELS,
@@ -125,6 +125,7 @@ function RolePermissionEditor({ role, initialGrid, departments }: RolePermission
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>(role.departments);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { refreshPermissions } = useAuth();
   const isDepartmentScope = scope === 'department';
 
   function toggleCell(feature: FeatureKey, action: PermissionAction) {
@@ -149,7 +150,8 @@ function RolePermissionEditor({ role, initialGrid, departments }: RolePermission
         departments: isDepartmentScope ? selectedDepartments : [],
         grid,
       });
-      toast({ title: 'Đã lưu cấu hình phân quyền', description: `Quyền mặc định của ${role.name} đã được cập nhật.` });
+      refreshPermissions();
+      toast({ title: 'Đã cập nhật ma trận phân quyền thành công!' });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Không thể lưu cấu hình phân quyền.');
     } finally {

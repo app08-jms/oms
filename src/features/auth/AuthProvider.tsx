@@ -9,6 +9,7 @@ interface AuthContextValue {
   session: StoredSession | null;
   permissions: PermissionGrid | null;
   permissionsError: string | null;
+  refreshPermissions: () => void;
   viewerRoleOverride: string | null;
   setViewerRoleOverride: (roleKey: string | null) => void;
   startSession: (account: AuthAccount, hotel: HotelRef) => void;
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<StoredSession | null>(loadInitialSession);
   const [permissions, setPermissions] = useState<PermissionGrid | null>(null);
   const [permissionsError, setPermissionsError] = useState<string | null>(null);
+  const [permissionsRevision, setPermissionsRevision] = useState(0);
   const [viewerRoleOverride, setViewerRoleOverrideState] = useState<string | null>(null);
 
   const logout = useCallback(() => {
@@ -71,6 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [session, logout]);
 
+  const refreshPermissions = useCallback(() => setPermissionsRevision((revision) => revision + 1), []);
+
   useEffect(() => {
     if (!session) {
       setPermissions(null);
@@ -78,7 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     let active = true;
-    setPermissions(null);
     setPermissionsError(null);
     fetchEffectivePermissions(session.account)
       .then((grid) => {
@@ -90,19 +93,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [session]);
+  }, [session, permissionsRevision]);
 
   const value = useMemo(
     () => ({
       session,
       permissions,
       permissionsError,
+      refreshPermissions,
       viewerRoleOverride,
       setViewerRoleOverride,
       startSession,
       logout,
     }),
-    [session, permissions, permissionsError, viewerRoleOverride, setViewerRoleOverride, startSession, logout],
+    [session, permissions, permissionsError, refreshPermissions, viewerRoleOverride, setViewerRoleOverride, startSession, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
