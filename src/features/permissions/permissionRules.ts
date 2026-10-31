@@ -13,49 +13,41 @@ export const PERMISSION_FEATURES = [
     key: 'attendance',
     name: 'Chấm công hàng ngày',
     note: 'Nhân viên: tự check-in và gửi yêu cầu. Quản lý: duyệt, từ chối, xóa.',
-    actions: ['view', 'edit', 'approve', 'delete'],
   },
   {
     key: 'schedule',
     name: 'Lịch làm việc',
     note: 'Nhân viên: chỉ xem. Quản lý: tạo, sửa, xóa ca.',
-    actions: ['view', 'edit', 'delete'],
   },
   {
     key: 'timesheet',
     name: 'Bảng chấm công',
     note: 'Nhân viên: chỉ xem. Quản lý: sửa, duyệt, xóa.',
-    actions: ['view', 'edit', 'approve', 'delete'],
   },
   {
     key: 'closing',
     name: 'Chốt công',
     note: 'Quản lý: duyệt tăng ca, khóa dữ liệu, xuất PDF.',
-    actions: ['view', 'edit', 'approve'],
   },
   {
     key: 'leave',
     name: 'Sổ phép',
     note: 'Nhân viên: xem số dư. Quản lý: điều chỉnh số dư, chuyển năm.',
-    actions: ['view', 'edit'],
   },
   {
     key: 'employees',
     name: 'Hồ sơ nhân viên',
     note: 'Quản lý: tạo, nhập Excel, sửa, xóa hồ sơ.',
-    actions: ['view', 'edit', 'delete'],
   },
   {
     key: 'system',
     name: 'Cấu hình & Hệ thống',
     note: 'Chỉ Admin và Super Admin.',
-    actions: ['view', 'edit', 'delete'],
   },
 ] as const satisfies ReadonlyArray<{
   key: string;
   name: string;
   note: string;
-  actions: readonly PermissionAction[];
 }>;
 
 export type FeatureKey = (typeof PERMISSION_FEATURES)[number]['key'];
@@ -85,10 +77,6 @@ export function applyOverrides(inherited: PermissionGrid, overrides: OverrideMap
     }
   }
   return grid;
-}
-
-export function isFeatureAction(feature: (typeof PERMISSION_FEATURES)[number], action: PermissionAction): boolean {
-  return (feature.actions as readonly PermissionAction[]).includes(action);
 }
 
 export type RoleTone = 'red' | 'blue' | 'yellow' | 'green' | 'slate';

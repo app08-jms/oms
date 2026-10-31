@@ -2,7 +2,6 @@ import {
   PERMISSION_ACTIONS,
   PERMISSION_ACTION_LABELS,
   PERMISSION_FEATURES,
-  isFeatureAction,
   type FeatureKey,
   type PermissionAction,
   type PermissionGrid,
@@ -16,7 +15,7 @@ interface PermissionMatrixProps {
 
 const HEAD_CLASS = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#5C6670]';
 const CHECKBOX_CLASS =
-  'h-4 w-4 cursor-pointer rounded border-[#CBD5E1] accent-[#4F7284] transition-transform duration-150 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F7284]/40';
+  'h-4 w-4 cursor-pointer accent-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400';
 
 export function PermissionMatrix({ grid, inheritedGrid, onToggle }: PermissionMatrixProps) {
   return (
@@ -41,13 +40,6 @@ export function PermissionMatrix({ grid, inheritedGrid, onToggle }: PermissionMa
                   <p className="mt-0.5 text-xs text-[#5C6670]">{feature.note}</p>
                 </td>
                 {PERMISSION_ACTIONS.map((action) => {
-                  if (!isFeatureAction(feature, action)) {
-                    return (
-                      <td key={action} className="px-4 py-3 text-center text-sm text-[#CBD5E1]">
-                        —
-                      </td>
-                    );
-                  }
                   const checked = grid[feature.key][action];
                   const inherited = inheritedGrid?.[feature.key][action];
                   const isCustom = inherited !== undefined && inherited !== checked;

@@ -151,7 +151,7 @@ function RolePermissionEditor({ role, initialGrid, departments }: RolePermission
         grid,
       });
       refreshPermissions();
-      toast({ title: 'Đã cập nhật ma trận phân quyền!' });
+      toast({ title: 'Đã lưu ma trận phân quyền thành công!', className: 'border-success/40 text-success' });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Không thể lưu cấu hình phân quyền.');
     } finally {
