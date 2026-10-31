@@ -123,14 +123,11 @@ export function canViewerSeeRole(viewerRoleKey: string, roleKey: string): boolea
   return viewerRoleKey === SUPER_ADMIN_ROLE_KEY || roleKey !== SUPER_ADMIN_ROLE_KEY;
 }
 
-export const ACCOUNT_ROLE_KEYS: readonly string[] = ['super_admin', 'admin', 'mod', 'staff'];
+const ELEVATED_ROLE_KEYS: readonly string[] = [SUPER_ADMIN_ROLE_KEY, 'admin'];
 
 export function canViewerCreateRole(viewerRoleKey: string, roleKey: string): boolean {
-  const roleLevel = ACCOUNT_ROLE_KEYS.indexOf(roleKey);
-  if (roleLevel === -1) return false;
   if (viewerRoleKey === SUPER_ADMIN_ROLE_KEY) return true;
-  const viewerLevel = ACCOUNT_ROLE_KEYS.indexOf(viewerRoleKey);
-  return viewerLevel !== -1 && roleLevel > viewerLevel;
+  return !ELEVATED_ROLE_KEYS.includes(roleKey);
 }
 
 export function filterRolesForViewer(roles: RoleSummary[], viewerRoleKey: string): RoleSummary[] {

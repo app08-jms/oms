@@ -70,6 +70,7 @@ export function UserManagementPage() {
 
   function openDialog(next: NonNullable<DialogState>) {
     catalog.clearActionError();
+    if (next.kind === 'create') void roles.refresh();
     setDialog(next);
   }
 
