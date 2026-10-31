@@ -1,22 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { isSessionExpired, SESSION_DURATION_MS, type AuthAccount, type HotelRef, type StoredSession } from '@/features/auth/authRules';
 import { clearStoredSession, readStoredSession, writeStoredSession } from '@/features/auth/authStorage';
+import { AuthContext, type AuthContextValue } from '@/features/auth/authContext';
 import { endAuthSession, fetchEffectivePermissions } from '@/features/auth/authService';
 import { SUPER_ADMIN_ROLE_KEY, type PermissionGrid } from '@/features/permissions/permissionRules';
 import { supabase } from '@/lib/supabase';
-
-interface AuthContextValue {
-  session: StoredSession | null;
-  permissions: PermissionGrid | null;
-  permissionsError: string | null;
-  refreshPermissions: () => void;
-  viewerRoleOverride: string | null;
-  setViewerRoleOverride: (roleKey: string | null) => void;
-  startSession: (account: AuthAccount, hotel: HotelRef) => void;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
 
 function loadInitialSession(): StoredSession | null {
   const stored = readStoredSession();
