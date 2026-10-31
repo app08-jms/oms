@@ -1,36 +1,32 @@
-import { AuthRetryableFetchError } from '@supabase/supabase-js';
-import { accountEmailFor, type AuthAccount, type HotelRef } from '@/features/auth/authRules';
+import { type AuthAccount, type HotelRef } from '@/features/auth/authRules';
 import { SUPER_ADMIN_ROLE_KEY, applyOverrides, type PermissionGrid } from '@/features/permissions/permissionRules';
 import { fetchUserPermissionContext } from '@/features/permissions/permissionService';
 import { supabase } from '@/lib/supabase';
 
 const INVALID_CREDENTIALS = 'Tài khoản hoặc mật khẩu không đúng.';
 const NETWORK_ERROR = 'Không thể kết nối máy chủ. Vui lòng thử lại.';
-const UNLINKED_ACCOUNT = 'Tài khoản chưa được liên kết với hồ sơ người dùng.';
-const INACTIVE_ACCOUNT = 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.';
-const HOTEL_LOAD_ERROR = 'Không thể tải danh sách khách sạn.';
 const PROFILE_LOAD_ERROR = 'Không thể tải thông tin tài khoản.';
+const HOTEL_LOAD_ERROR = 'Không thể tải danh sách khách sạn.';
 const PERMISSION_LOAD_ERROR = 'Không thể tải quyền truy cập. Vui lòng đăng nhập lại.';
 const HOTEL_REF_COLUMNS = 'id, system_hotel_id, name, address, id_prefix';
 
-interface AccountRow {
-  system_uid: string;
+interface LoginAccountPayload {
+  systemUid: string;
   username: string;
-  full_name: string;
-  role: string;
-  is_active: boolean;
-  employee_system_uid: string | null;
+  fullName: string;
+  roleKey: string;
+  employeeSystemUid: string | null;
+}
+
+interface LoginResponse {
+  ok: boolean;
+  token?: string;
+  account?: LoginAccountPayload;
 }
 
 interface EmployeeRef {
   code: string;
   department: string;
-}
-
-function isEmployeeRef(value: unknown): value is EmployeeRef {
-  if (!value || typeof value !== 'object') return false;
-  const row = value as Record<string, unknown>;
-  return typeof row.code === 'string' && typeof row.department === 'string';
 }
 
 interface HotelRow {
@@ -41,16 +37,32 @@ interface HotelRow {
   id_prefix: string | null;
 }
 
-function isAccountRow(value: unknown): value is AccountRow {
+export interface LoginResult {
+  account: AuthAccount;
+  token: string;
+}
+
+function isLoginResponse(value: unknown): value is LoginResponse {
   if (!value || typeof value !== 'object') return false;
   const row = value as Record<string, unknown>;
+  if (row.ok === false) return true;
+  const account = row.account as Record<string, unknown> | undefined;
   return (
-    typeof row.system_uid === 'string' &&
-    typeof row.username === 'string' &&
-    typeof row.full_name === 'string' &&
-    typeof row.role === 'string' &&
-    typeof row.is_active === 'boolean'
+    row.ok === true &&
+    typeof row.token === 'string' &&
+    !!account &&
+    typeof account.systemUid === 'string' &&
+    typeof account.username === 'string' &&
+    typeof account.fullName === 'string' &&
+    typeof account.roleKey === 'string' &&
+    (account.employeeSystemUid === null || typeof account.employeeSystemUid === 'string')
   );
+}
+
+function isEmployeeRef(value: unknown): value is EmployeeRef {
+  if (!value || typeof value !== 'object') return false;
+  const row = value as Record<string, unknown>;
+  return typeof row.code === 'string' && typeof row.department === 'string';
 }
 
 function isHotelRow(value: unknown): value is HotelRow {
@@ -65,50 +77,27 @@ function isHotelRow(value: unknown): value is HotelRow {
   );
 }
 
-export async function endAuthSession(): Promise<void> {
-  await supabase.auth.signOut();
-}
-
-export async function signInWithUsername(username: string, password: string): Promise<AuthAccount> {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: accountEmailFor(username),
-    password,
+export async function signInWithUsername(username: string, password: string): Promise<LoginResult> {
+  const { data, error } = await supabase.rpc('login_app_user', {
+    p_username: username.trim(),
+    p_password: password,
   });
-  if (error instanceof AuthRetryableFetchError) throw new Error(NETWORK_ERROR);
-  if (error || !data.user) throw new Error(INVALID_CREDENTIALS);
+  if (error) throw new Error(NETWORK_ERROR);
+  if (!isLoginResponse(data)) throw new Error(PROFILE_LOAD_ERROR);
+  if (!data.ok || !data.token || !data.account) throw new Error(INVALID_CREDENTIALS);
 
-  const { data: row, error: profileError } = await supabase
-    .from('app_users')
-    .select('system_uid, username, full_name, role, is_active, employee_system_uid')
-    .eq('auth_user_id', data.user.id)
-    .maybeSingle();
-  if (profileError) {
-    await endAuthSession();
-    throw new Error(PROFILE_LOAD_ERROR);
-  }
-  if (!row) {
-    await endAuthSession();
-    throw new Error(UNLINKED_ACCOUNT);
-  }
-  if (!isAccountRow(row)) {
-    await endAuthSession();
-    throw new Error(PROFILE_LOAD_ERROR);
-  }
-  if (!row.is_active) {
-    await endAuthSession();
-    throw new Error(INACTIVE_ACCOUNT);
-  }
-
-  const employee = await fetchLinkedEmployee(row.employee_system_uid);
+  const employee = await fetchLinkedEmployee(data.account.employeeSystemUid);
 
   return {
-    systemUid: row.system_uid,
-    authUserId: data.user.id,
-    username: row.username,
-    fullName: row.full_name,
-    roleKey: row.role,
-    employeeCode: employee?.code ?? null,
-    department: employee?.department ?? null,
+    token: data.token,
+    account: {
+      systemUid: data.account.systemUid,
+      username: data.account.username,
+      fullName: data.account.fullName,
+      roleKey: data.account.roleKey,
+      employeeCode: employee?.code ?? null,
+      department: employee?.department ?? null,
+    },
   };
 }
 
@@ -156,19 +145,20 @@ export async function fetchEffectivePermissions(account: AuthAccount): Promise<P
   }
 }
 
-export async function changeOwnPassword(username: string, current: string, next: string): Promise<void> {
-  const { error: verifyError } = await supabase.auth.signInWithPassword({
-    email: accountEmailFor(username),
-    password: current,
-  });
-  if (verifyError) throw new Error('Mật khẩu hiện tại không đúng.');
-
-  const { error } = await supabase.auth.updateUser({ password: next });
-  if (!error) return;
-  if (error.code === 'weak_password') {
-    throw new Error('Mật khẩu mới chưa đủ mạnh. Hãy dùng mật khẩu dài hơn hoặc khó đoán hơn.');
-  }
-  if (error.code === 'same_password') throw new Error('Mật khẩu mới phải khác mật khẩu hiện tại.');
-  throw new Error('Không thể cập nhật mật khẩu. Vui lòng thử lại.');
+export async function logoutAppUser(token: string): Promise<void> {
+  await supabase.rpc('logout_app_user', { p_token: token });
 }
 
+export async function changeOwnPassword(token: string, current: string, next: string): Promise<void> {
+  const { data, error } = await supabase.rpc('change_app_user_password', {
+    p_token: token,
+    p_current: current,
+    p_next: next,
+  });
+  if (error) {
+    if (error.code === '22023') throw new Error('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    if (error.code === '42501') throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    throw new Error('Không thể cập nhật mật khẩu. Vui lòng thử lại.');
+  }
+  if (data !== true) throw new Error('Mật khẩu hiện tại không đúng.');
+}

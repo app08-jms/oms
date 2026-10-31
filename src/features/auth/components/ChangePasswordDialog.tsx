@@ -5,18 +5,19 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MIN_PASSWORD_LENGTH, validatePasswordChange } from '@/features/auth/authRules';
+import { useAuth } from '@/features/auth/AuthProvider';
 import { changeOwnPassword } from '@/features/auth/authService';
 import { toast } from '@/hooks/use-toast';
 
 interface ChangePasswordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  username: string;
 }
 
 const EMPTY_FORM = { current: '', next: '', confirm: '' };
 
-export function ChangePasswordDialog({ open, onOpenChange, username }: ChangePasswordDialogProps) {
+export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialogProps) {
+  const { session } = useAuth();
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -33,7 +34,7 @@ export function ChangePasswordDialog({ open, onOpenChange, username }: ChangePas
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isSaving) return;
+    if (isSaving || !session) return;
     const validationError = validatePasswordChange(form);
     if (validationError) {
       setError(validationError);
@@ -42,7 +43,7 @@ export function ChangePasswordDialog({ open, onOpenChange, username }: ChangePas
     setError(null);
     setIsSaving(true);
     try {
-      await changeOwnPassword(username, form.current, form.next);
+      await changeOwnPassword(session.token, form.current, form.next);
       toast({ title: 'Đã cập nhật mật khẩu', description: 'Mật khẩu mới sẽ được dùng cho lần đăng nhập tiếp theo.' });
       close();
     } catch (err) {

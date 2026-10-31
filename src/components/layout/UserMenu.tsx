@@ -60,7 +60,7 @@ export function UserMenu() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <ChangePasswordDialog open={isPasswordOpen} onOpenChange={setIsPasswordOpen} username={account.username} />
+      <ChangePasswordDialog open={isPasswordOpen} onOpenChange={setIsPasswordOpen} />
     </>
   );
 }

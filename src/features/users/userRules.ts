@@ -38,13 +38,20 @@ export const DEFAULT_USER_FILTERS: UserFilters = {
 
 export interface NewAccountDraft {
   employeeSystemUid: string;
+  hotelId: string;
   username: string;
   fullName: string;
   role: string;
 }
 
-export function createEmptyAccountDraft(): NewAccountDraft {
-  return { employeeSystemUid: '', username: '', fullName: '', role: DEFAULT_ROLE_KEY };
+export const ACCOUNT_ROLE_OPTIONS = [
+  { key: 'super_admin', label: 'Super Admin' },
+  { key: 'admin', label: 'Hotel Admin' },
+  { key: 'staff', label: 'Staff' },
+];
+
+export function createEmptyAccountDraft(hotelId: string): NewAccountDraft {
+  return { employeeSystemUid: '', hotelId, username: '', fullName: '', role: DEFAULT_ROLE_KEY };
 }
 
 export function applyUserFilters(rows: UserAccountRow[], filters: UserFilters): UserAccountRow[] {
@@ -60,6 +67,9 @@ export function applyUserFilters(rows: UserAccountRow[], filters: UserFilters): 
 }
 
 export function validateAccountDraft(draft: NewAccountDraft, employees: EmployeeOption[]): string | null {
+  if (!draft.hotelId) {
+    return 'Vui lòng chọn khách sạn.';
+  }
   if (draft.employeeSystemUid) {
     if (!employees.some((employee) => employee.systemUid === draft.employeeSystemUid)) {
       return 'Vui lòng chọn hồ sơ nhân viên hợp lệ.';

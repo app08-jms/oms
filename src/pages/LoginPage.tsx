@@ -4,7 +4,7 @@ import { Eye, EyeOff, Loader as Loader2 } from 'lucide-react';
 import { HotelPickerDialog } from '@/features/auth/components/HotelPickerDialog';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { requiresHotelPicker, type AuthAccount, type HotelRef } from '@/features/auth/authRules';
-import { endAuthSession, fetchAccountHotels, signInWithUsername } from '@/features/auth/authService';
+import { fetchAccountHotels, signInWithUsername } from '@/features/auth/authService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,7 @@ import { Logo } from '@/components/layout/Logo';
 
 interface PendingLogin {
   account: AuthAccount;
+  token: string;
   hotels: HotelRef[];
 }
 
@@ -32,27 +33,21 @@ export function LoginPage() {
     setError(null);
     setIsSubmitting(true);
     try {
-      const account = await signInWithUsername(username, password);
+      const { account, token } = await signInWithUsername(username, password);
       const hotels = await fetchAccountHotels(account);
       if (hotels.length === 0) {
-        await endAuthSession();
         throw new Error('Tài khoản chưa được gán cho khách sạn nào.');
       }
       if (requiresHotelPicker(account, hotels)) {
-        setPending({ account, hotels });
+        setPending({ account, token, hotels });
       } else {
-        startSession(account, hotels[0]);
+        startSession(account, hotels[0], token);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  async function cancelHotelPicker() {
-    setPending(null);
-    await endAuthSession();
   }
 
   return (
@@ -129,9 +124,9 @@ export function LoginPage() {
           hotels={pending.hotels}
           onSelect={(hotel) => {
             setPending(null);
-            startSession(pending.account, hotel);
+            startSession(pending.account, hotel, pending.token);
           }}
-          onCancel={() => void cancelHotelPicker()}
+          onCancel={() => setPending(null)}
         />
       ) : null}
     </div>

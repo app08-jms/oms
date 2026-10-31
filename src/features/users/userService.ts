@@ -1,6 +1,8 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { type HotelRef } from '@/features/auth/authRules';
 import {
+  DEFAULT_ACCOUNT_PASSWORD,
   type EmployeeOption,
   type NewAccountDraft,
   type UserAccountRow,
@@ -8,6 +10,11 @@ import {
 
 const LOAD_ERROR = 'Không thể tải danh sách tài khoản.';
 const LINK_TAKEN_MESSAGE = 'Hồ sơ nhân viên này đã được liên kết với tài khoản khác.';
+const CREATE_ERROR = 'Không thể tạo tài khoản. Vui lòng thử lại.';
+const USERNAME_TAKEN_ERROR = 'Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác.';
+const CREATE_PERMISSION_ERROR = 'Bạn không có quyền tạo tài khoản này hoặc phiên đăng nhập đã hết hạn.';
+const UNIQUE_VIOLATION = '23505';
+const INSUFFICIENT_PRIVILEGE = '42501';
 
 interface AppUserRow {
   system_uid: string;
@@ -23,6 +30,14 @@ interface EmployeeRow {
   code: string;
   full_name: string;
   department: string;
+}
+
+interface HotelOptionRow {
+  id: string;
+  system_hotel_id: string;
+  name: string;
+  address: string | null;
+  id_prefix: string | null;
 }
 
 function isAppUserRow(value: unknown): value is AppUserRow {
@@ -47,6 +62,17 @@ function isEmployeeRow(value: unknown): value is EmployeeRow {
   );
 }
 
+function isHotelOptionRow(value: unknown): value is HotelOptionRow {
+  const row = value as HotelOptionRow;
+  return (
+    typeof row?.id === 'string' &&
+    typeof row.system_hotel_id === 'string' &&
+    typeof row.name === 'string' &&
+    (row.address === null || typeof row.address === 'string') &&
+    (row.id_prefix === null || typeof row.id_prefix === 'string')
+  );
+}
+
 function assertRows<T>(data: unknown, guard: (value: unknown) => value is T): T[] {
   if (!Array.isArray(data) || !data.every(guard)) throw new Error(LOAD_ERROR);
   return data;
@@ -66,16 +92,22 @@ async function invokeAccountAction(body: Record<string, unknown>, fallback: stri
   if (data?.ok !== true) throw new Error(fallback);
 }
 
-export async function fetchUserAccounts(): Promise<{ accounts: UserAccountRow[]; employees: EmployeeOption[] }> {
-  const [userResult, employeeResult] = await Promise.all([
+export async function fetchUserAccounts(): Promise<{
+  accounts: UserAccountRow[];
+  employees: EmployeeOption[];
+  hotels: HotelRef[];
+}> {
+  const [userResult, employeeResult, hotelResult] = await Promise.all([
     supabase
       .from('app_users')
       .select('system_uid, username, full_name, role, is_active, employee_system_uid')
       .order('username', { ascending: true }),
     supabase.from('employees').select('system_uid, code, full_name, department').order('code', { ascending: true }),
+    supabase.from('hotels').select('id, system_hotel_id, name, address, id_prefix').order('name', { ascending: true }),
   ]);
   if (userResult.error) throw userResult.error;
   if (employeeResult.error) throw employeeResult.error;
+  if (hotelResult.error) throw hotelResult.error;
 
   const employees = assertRows(employeeResult.data, isEmployeeRow).map((row) => ({
     systemUid: row.system_uid,
@@ -97,20 +129,30 @@ export async function fetchUserAccounts(): Promise<{ accounts: UserAccountRow[];
     };
   });
 
-  return { accounts, employees };
+  const hotels = assertRows(hotelResult.data, isHotelOptionRow).map((row): HotelRef => ({
+    id: row.id,
+    systemHotelId: row.system_hotel_id,
+    name: row.name,
+    address: row.address,
+    idPrefix: row.id_prefix,
+  }));
+
+  return { accounts, employees, hotels };
 }
 
-export async function createUserAccount(draft: NewAccountDraft): Promise<void> {
-  await invokeAccountAction(
-    {
-      action: 'create',
-      username: draft.username.trim(),
-      full_name: draft.fullName.trim(),
-      role: draft.role,
-      employee_system_uid: draft.employeeSystemUid || null,
-    },
-    'Không thể tạo tài khoản. Vui lòng thử lại.',
-  );
+export async function createUserAccount(token: string, draft: NewAccountDraft): Promise<void> {
+  const { error } = await supabase.rpc('create_app_user', {
+    p_token: token,
+    p_username: draft.username.trim(),
+    p_password: DEFAULT_ACCOUNT_PASSWORD,
+    p_full_name: draft.fullName.trim(),
+    p_role: draft.role,
+    p_hotel_id: draft.hotelId,
+    p_employee_system_uid: draft.employeeSystemUid || null,
+  });
+  if (error?.code === UNIQUE_VIOLATION) throw new Error(USERNAME_TAKEN_ERROR);
+  if (error?.code === INSUFFICIENT_PRIVILEGE) throw new Error(CREATE_PERMISSION_ERROR);
+  if (error) throw new Error(CREATE_ERROR);
 }
 
 export async function resetAccountPassword(systemUid: string): Promise<void> {

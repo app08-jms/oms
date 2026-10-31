@@ -10,9 +10,9 @@ import { LinkProfileDialog } from '@/features/users/components/AccountActionDial
 import { UserFilterBar } from '@/features/users/components/UserFilterBar';
 import { UserFormDialog } from '@/features/users/components/UserFormDialog';
 import { UserTable } from '@/features/users/components/UserTable';
-import { useViewerRole } from '@/features/auth/AuthProvider';
+import { useAuth, useViewerRole } from '@/features/auth/AuthProvider';
 import { UserOverrideDialog } from '@/features/permissions/components/UserOverrideDialog';
-import { canViewerSeeRole, filterRolesForViewer } from '@/features/permissions/permissionRules';
+import { SUPER_ADMIN_ROLE_KEY, canViewerSeeRole, filterRolesForViewer } from '@/features/permissions/permissionRules';
 import { useRoles } from '@/features/permissions/useRoles';
 import {
   DEFAULT_ACCOUNT_PASSWORD,
@@ -43,10 +43,13 @@ type DialogState =
   | null;
 
 export function UserManagementPage() {
+  const { session } = useAuth();
   const catalog = useUserAccounts();
   const roles = useRoles();
   const activeRoleKey = useViewerRole().roleKey;
   const roleList = filterRolesForViewer(roles.data ?? [], activeRoleKey);
+  const isSuperAdmin = session?.account.roleKey === SUPER_ADMIN_ROLE_KEY;
+  const hotelOptions = isSuperAdmin ? catalog.data?.hotels ?? [] : session ? [session.hotel] : [];
   const [filters, setFilters] = useState<UserFilters>(DEFAULT_USER_FILTERS);
   const [dialog, setDialog] = useState<DialogState>(null);
 
@@ -74,10 +77,18 @@ export function UserManagementPage() {
   }
 
   async function handleCreate(draft: NewAccountDraft) {
-    const saved = await catalog.runAction(() => createUserAccount(draft), 'Không thể tạo tài khoản. Vui lòng thử lại.');
+    if (!session) return;
+    const saved = await catalog.runAction(
+      () => createUserAccount(session.token, draft),
+      'Không thể tạo tài khoản. Vui lòng thử lại.',
+    );
     if (!saved) return;
     setDialog(null);
-    toast({ title: 'Đã tạo tài khoản', description: `Mật khẩu mặc định: ${DEFAULT_ACCOUNT_PASSWORD}` });
+    toast({
+      title: 'Tạo tài khoản thành công!',
+      description: `Mật khẩu ban đầu: ${DEFAULT_ACCOUNT_PASSWORD}`,
+      className: 'border-success/40 text-success',
+    });
   }
 
   async function handleDetailsSave(account: UserAccountRow, values: { fullName: string; role: string }) {
@@ -199,7 +210,9 @@ export function UserManagementPage() {
       {dialog?.kind === 'create' && (
         <UserFormDialog
           unlinkedEmployees={unlinkedEmployees}
-          roles={roleList}
+          hotels={hotelOptions}
+          hotelLocked={!isSuperAdmin}
+          viewerRoleKey={activeRoleKey}
           isSaving={catalog.isSaving}
           errorMessage={catalog.actionError}
           onCancel={closeDialog}

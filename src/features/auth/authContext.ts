@@ -9,7 +9,7 @@ export interface AuthContextValue {
   refreshPermissions: () => void;
   viewerRoleOverride: string | null;
   setViewerRoleOverride: (roleKey: string | null) => void;
-  startSession: (account: AuthAccount, hotel: HotelRef) => void;
+  startSession: (account: AuthAccount, hotel: HotelRef, token: string) => void;
   logout: () => void;
 }
 

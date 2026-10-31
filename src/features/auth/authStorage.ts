@@ -14,10 +14,10 @@ function isStoredSession(value: unknown): value is StoredSession {
   const account = session.account as Record<string, unknown> | undefined;
   return (
     typeof session.expiresAt === 'number' &&
+    typeof session.token === 'string' &&
     isHotelRef(session.hotel) &&
     !!account &&
     typeof account.systemUid === 'string' &&
-    typeof account.authUserId === 'string' &&
     typeof account.username === 'string' &&
     typeof account.fullName === 'string' &&
     typeof account.roleKey === 'string'

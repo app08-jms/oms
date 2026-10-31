@@ -5,8 +5,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { RoleSummary } from '@/features/permissions/permissionRules';
+import { type HotelRef } from '@/features/auth/authRules';
+import { canViewerSeeRole } from '@/features/permissions/permissionRules';
 import {
+  ACCOUNT_ROLE_OPTIONS,
+  DEFAULT_ACCOUNT_PASSWORD,
   createEmptyAccountDraft,
   employeeOptionLabel,
   validateAccountDraft,
@@ -19,17 +22,30 @@ const NO_PROFILE = 'none';
 
 interface UserFormDialogProps {
   unlinkedEmployees: EmployeeOption[];
-  roles: RoleSummary[];
+  hotels: HotelRef[];
+  hotelLocked: boolean;
+  viewerRoleKey: string;
   isSaving: boolean;
   errorMessage: string | null;
   onCancel: () => void;
   onSubmit: (draft: NewAccountDraft) => void;
 }
 
-export function UserFormDialog({ unlinkedEmployees, roles, isSaving, errorMessage, onCancel, onSubmit }: UserFormDialogProps) {
-  const [draft, setDraft] = useState<NewAccountDraft>(createEmptyAccountDraft);
+export function UserFormDialog({
+  unlinkedEmployees,
+  hotels,
+  hotelLocked,
+  viewerRoleKey,
+  isSaving,
+  errorMessage,
+  onCancel,
+  onSubmit,
+}: UserFormDialogProps) {
+  const [draft, setDraft] = useState<NewAccountDraft>(() => createEmptyAccountDraft(hotelLocked ? hotels[0]?.id ?? '' : ''));
   const [validationError, setValidationError] = useState<string | null>(null);
   const isLinked = draft.employeeSystemUid !== '';
+  const roleOptions = ACCOUNT_ROLE_OPTIONS.filter((option) => canViewerSeeRole(viewerRoleKey, option.key));
+  const lockedHotel = hotelLocked ? hotels[0] ?? null : null;
 
   function handleProfileChange(value: string) {
     if (value === NO_PROFILE) {
@@ -63,7 +79,7 @@ export function UserFormDialog({ unlinkedEmployees, roles, isSaving, errorMessag
         <DialogHeader className="gap-2">
           <DialogTitle className="text-xl font-semibold text-[#1F2A30]">Thêm tài khoản mới</DialogTitle>
           <DialogDescription className="text-sm text-[#5C6670]">
-            Tài khoản được tạo với mật khẩu mặc định Jenius@2026. Có thể liên kết với một hồ sơ nhân viên chưa có tài khoản khác.
+            Tài khoản mới dùng mật khẩu ban đầu {DEFAULT_ACCOUNT_PASSWORD}. Có thể liên kết với một hồ sơ nhân viên chưa có tài khoản khác.
           </DialogDescription>
         </DialogHeader>
 
@@ -87,17 +103,39 @@ export function UserFormDialog({ unlinkedEmployees, roles, isSaving, errorMessag
             </Select>
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="account-hotel" className="text-sm font-medium text-[#1F2A30]">
+              Khách sạn
+            </Label>
+            {lockedHotel ? (
+              <Input id="account-hotel" value={lockedHotel.name} disabled className={fieldClass} />
+            ) : (
+              <Select value={draft.hotelId || undefined} onValueChange={(value) => setDraft((current) => ({ ...current, hotelId: value }))}>
+                <SelectTrigger id="account-hotel" className={fieldClass}>
+                  <SelectValue placeholder="Chọn khách sạn" />
+                </SelectTrigger>
+                <SelectContent>
+                  {hotels.map((hotel) => (
+                    <SelectItem key={hotel.id} value={hotel.id}>
+                      {hotel.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="account-username" className="text-sm font-medium text-[#1F2A30]">
-                Username
+                Tên đăng nhập
               </Label>
               <Input
                 id="account-username"
                 value={draft.username}
                 disabled={isLinked}
                 onChange={(event) => setDraft((current) => ({ ...current, username: event.target.value }))}
-                placeholder="VD: nguyenvana"
+                placeholder="VD: vluna.gm"
                 autoComplete="off"
                 className={fieldClass}
               />
@@ -122,14 +160,14 @@ export function UserFormDialog({ unlinkedEmployees, roles, isSaving, errorMessag
               <Select
                 value={draft.role}
                 onValueChange={(value) => setDraft((current) => ({ ...current, role: value }))}
-                >
+              >
                 <SelectTrigger id="account-role" className={fieldClass}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.key} value={role.key}>
-                      {role.name}
+                  {roleOptions.map((option) => (
+                    <SelectItem key={option.key} value={option.key}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

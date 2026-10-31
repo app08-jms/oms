@@ -2,11 +2,9 @@ import { SUPER_ADMIN_ROLE_KEY } from '@/features/permissions/permissionRules';
 
 export const SESSION_DURATION_MS = 60 * 60 * 1000;
 export const MIN_PASSWORD_LENGTH = 6;
-const ACCOUNT_EMAIL_DOMAIN = 'accounts.jenius.local';
 
 export interface AuthAccount {
   systemUid: string;
-  authUserId: string;
   username: string;
   fullName: string;
   roleKey: string;
@@ -25,6 +23,7 @@ export interface HotelRef {
 export interface StoredSession {
   account: AuthAccount;
   hotel: HotelRef;
+  token: string;
   expiresAt: number;
 }
 
@@ -32,10 +31,6 @@ export interface PasswordChangeInput {
   current: string;
   next: string;
   confirm: string;
-}
-
-export function accountEmailFor(username: string): string {
-  return `${username.trim().toLowerCase()}@${ACCOUNT_EMAIL_DOMAIN}`;
 }
 
 export function requiresHotelPicker(account: AuthAccount, hotels: HotelRef[]): boolean {

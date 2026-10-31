@@ -2,9 +2,8 @@ import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode }
 import { isSessionExpired, SESSION_DURATION_MS, type AuthAccount, type HotelRef, type StoredSession } from '@/features/auth/authRules';
 import { clearStoredSession, readStoredSession, writeStoredSession } from '@/features/auth/authStorage';
 import { AuthContext, type AuthContextValue } from '@/features/auth/authContext';
-import { endAuthSession, fetchEffectivePermissions } from '@/features/auth/authService';
+import { fetchEffectivePermissions, logoutAppUser } from '@/features/auth/authService';
 import { SUPER_ADMIN_ROLE_KEY, type PermissionGrid } from '@/features/permissions/permissionRules';
-import { supabase } from '@/lib/supabase';
 
 function loadInitialSession(): StoredSession | null {
   const stored = readStoredSession();
@@ -24,11 +23,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [viewerRoleOverride, setViewerRoleOverrideState] = useState<string | null>(null);
 
   const logout = useCallback(() => {
+    if (session) void logoutAppUser(session.token);
     clearStoredSession();
     setSession(null);
     setViewerRoleOverrideState(null);
-    void endAuthSession();
-  }, []);
+  }, [session]);
 
   const setViewerRoleOverride = useCallback(
     (roleKey: string | null) => {
@@ -38,8 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [session],
   );
 
-  const startSession = useCallback((account: AuthAccount, hotel: HotelRef) => {
-    const next: StoredSession = { account, hotel, expiresAt: Date.now() + SESSION_DURATION_MS };
+  const startSession = useCallback((account: AuthAccount, hotel: HotelRef, token: string) => {
+    const next: StoredSession = { account, hotel, token, expiresAt: Date.now() + SESSION_DURATION_MS };
     writeStoredSession(next);
     setSession(next);
   }, []);
@@ -48,17 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session) return;
     const timer = window.setTimeout(logout, Math.max(0, session.expiresAt - Date.now()));
     return () => window.clearTimeout(timer);
-  }, [session, logout]);
-
-  useEffect(() => {
-    if (!session) return;
-    let active = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (active && !data.session) logout();
-    });
-    return () => {
-      active = false;
-    };
   }, [session, logout]);
 
   const refreshPermissions = useCallback(() => setPermissionsRevision((revision) => revision + 1), []);
