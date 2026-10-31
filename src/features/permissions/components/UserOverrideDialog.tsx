@@ -134,7 +134,7 @@ function OverrideEditor({ userSystemUid, username, inherited, initialOverrides, 
         </Button>
       </div>
 
-      <PermissionMatrix grid={effective} inheritedGrid={inherited} disabled={isSaving} onToggle={toggleCell} />
+      <PermissionMatrix grid={effective} inheritedGrid={inherited} onToggle={toggleCell} />
 
       {errorMessage && (
         <p role="alert" className="rounded-md border border-error/40 bg-error/5 px-4 py-3 text-sm text-error">
