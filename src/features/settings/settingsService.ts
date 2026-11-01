@@ -1,8 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import {
   normalizeShiftDraft,
+  SHIFT_DAY_STATUSES,
   type Department,
   type Position,
+  type ShiftDayStatus,
   type ShiftDraft,
   type ShiftType,
 } from '@/features/settings/settingsRules';
@@ -25,7 +27,7 @@ interface PositionRow {
 interface ShiftRow {
   code: string;
   name: string;
-  is_working: boolean;
+  day_status: ShiftDayStatus;
   start_time: string | null;
   end_time: string | null;
   break_minutes: number;
@@ -58,7 +60,7 @@ function isShiftRow(value: unknown): value is ShiftRow {
   return (
     typeof row?.code === 'string' &&
     typeof row.name === 'string' &&
-    typeof row.is_working === 'boolean' &&
+    (SHIFT_DAY_STATUSES as readonly string[]).includes(row.day_status) &&
     typeof row.break_minutes === 'number' &&
     typeof row.he_so_cong === 'number' &&
     typeof row.sort_order === 'number'
@@ -155,14 +157,14 @@ export async function deletePosition(department: Department, position: Position)
 export async function fetchShiftTypes(): Promise<ShiftType[]> {
   const { data, error } = await supabase
     .from('shift_types')
-    .select('code, name, is_working, start_time, end_time, break_minutes, he_so_cong, sort_order')
+    .select('code, name, day_status, start_time, end_time, break_minutes, he_so_cong, sort_order')
     .order('sort_order', { ascending: true });
   if (error) throw error;
 
   return assertRows(data, isShiftRow, 'ca làm việc').map((row) => ({
     code: row.code,
     name: row.name,
-    isWorking: row.is_working,
+    dayStatus: row.day_status,
     startTime: row.start_time,
     endTime: row.end_time,
     breakMinutes: row.break_minutes,
@@ -175,9 +177,10 @@ function toShiftPayload(draft: ShiftDraft) {
   const values = normalizeShiftDraft(draft);
   return {
     name: values.name,
-    is_working: values.isWorking,
-    start_time: values.isWorking ? values.startTime : null,
-    end_time: values.isWorking ? values.endTime : null,
+    day_status: values.dayStatus,
+    is_working: values.dayStatus === 'workday',
+    start_time: values.dayStatus === 'workday' ? values.startTime : null,
+    end_time: values.dayStatus === 'workday' ? values.endTime : null,
     break_minutes: Number(values.breakMinutes),
     he_so_cong: Number(values.heSoCong),
   };

@@ -7,14 +7,20 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   calculateStandardHours,
+  defaultHeSoCongForStatus,
   formatBreakMinutes,
   formatHeSoCong,
   formatStandardHours,
   HE_SO_CONG_OPTIONS,
+  isLeaveDayStatus,
   normalizeShiftDraft,
+  SHIFT_DAY_STATUS_LABELS,
+  SHIFT_DAY_STATUSES,
   validateShiftDraft,
+  type ShiftDayStatus,
   type ShiftDraft,
 } from '@/features/settings/settingsRules';
+import { cn } from '@/lib/utils';
 
 interface ShiftFormDialogProps {
   mode: 'add' | 'edit';
@@ -27,6 +33,14 @@ interface ShiftFormDialogProps {
 }
 
 const fieldClass = 'h-10 border-[#E2E8F0] bg-white focus-visible:ring-[#4F7284]';
+const LEAVE_TOTAL_NOTE = '(Tính 1.0 công hưởng lương - Trừ vào quỹ phép/bù)';
+
+const DAY_STATUS_DESCRIPTIONS: Record<ShiftDayStatus, string> = {
+  workday: 'Có giờ làm việc',
+  off: 'Không tính giờ làm',
+  annual_leave: 'Trừ 1 ngày quỹ phép năm',
+  compensatory_leave: 'Trừ 1 ngày quỹ nghỉ bù',
+};
 
 function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: ReactNode }) {
   return (
@@ -51,12 +65,17 @@ export function ShiftFormDialog({
   const [draft, setDraft] = useState<ShiftDraft>(initialDraft);
   const [validationError, setValidationError] = useState<string | null>(null);
   const isEdit = mode === 'edit';
-  const isWorking = draft.isWorking;
+  const isWorking = draft.dayStatus === 'workday';
+  const isLeave = isLeaveDayStatus(draft.dayStatus);
   const hours = calculateStandardHours(draft);
   const crossesMidnight = isWorking && !!draft.startTime && !!draft.endTime && draft.endTime < draft.startTime;
 
   function update<K extends keyof ShiftDraft>(key: K, value: ShiftDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function changeDayStatus(dayStatus: ShiftDayStatus) {
+    setDraft((current) => ({ ...current, dayStatus, heSoCong: defaultHeSoCongForStatus(dayStatus) }));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -108,7 +127,7 @@ export function ShiftFormDialog({
               />
             </Field>
             <Field label="Hệ số công" htmlFor="shift-he-so-cong">
-              <Select value={draft.heSoCong} onValueChange={(value) => update('heSoCong', value)}>
+              <Select value={draft.heSoCong} disabled={isLeave} onValueChange={(value) => update('heSoCong', value)}>
                 <SelectTrigger id="shift-he-so-cong" className={fieldClass}>
                   <SelectValue />
                 </SelectTrigger>
@@ -126,18 +145,30 @@ export function ShiftFormDialog({
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium text-[#1F2A30]">Trạng thái ca</Label>
             <RadioGroup
-              value={isWorking ? 'working' : 'off'}
-              onValueChange={(value) => update('isWorking', value === 'working')}
-              className="flex flex-wrap gap-6"
+              value={draft.dayStatus}
+              onValueChange={(value) => changeDayStatus(value as ShiftDayStatus)}
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2"
             >
-              <label htmlFor="shift-status-working" className="flex cursor-pointer items-center gap-2 text-sm text-[#1F2A30]">
-                <RadioGroupItem id="shift-status-working" value="working" className="border-[#4F7284] text-[#4F7284]" />
-                Ngày làm việc
-              </label>
-              <label htmlFor="shift-status-off" className="flex cursor-pointer items-center gap-2 text-sm text-[#1F2A30]">
-                <RadioGroupItem id="shift-status-off" value="off" className="border-[#4F7284] text-[#4F7284]" />
-                Ngày nghỉ
-              </label>
+              {SHIFT_DAY_STATUSES.map((status) => (
+                <label
+                  key={status}
+                  htmlFor={`shift-status-${status}`}
+                  className={cn(
+                    'flex cursor-pointer items-start gap-3 rounded-lg border px-4 py-3 transition-colors duration-150 hover:border-[#4F7284]/60 hover:bg-[#F8FAFC]',
+                    draft.dayStatus === status ? 'border-[#4F7284] bg-[#4F7284]/5' : 'border-[#E2E8F0] bg-white'
+                  )}
+                >
+                  <RadioGroupItem
+                    id={`shift-status-${status}`}
+                    value={status}
+                    className="mt-0.5 border-[#4F7284] text-[#4F7284]"
+                  />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium text-[#1F2A30]">{SHIFT_DAY_STATUS_LABELS[status]}</span>
+                    <span className="text-xs text-[#5C6670]">{DAY_STATUS_DESCRIPTIONS[status]}</span>
+                  </span>
+                </label>
+              ))}
             </RadioGroup>
           </div>
 
@@ -186,7 +217,9 @@ export function ShiftFormDialog({
                 ? `Công thức: (giờ kết thúc - giờ bắt đầu) - ${formatBreakMinutes(Number(draft.breakMinutes) || 0)}${
                     crossesMidnight ? '. Ca qua đêm.' : ''
                   }`
-                : 'Ngày nghỉ không tính giờ làm.'}
+                : isLeave
+                  ? LEAVE_TOTAL_NOTE
+                  : 'Ngày nghỉ không tính giờ làm.'}
             </span>
           </div>
 

@@ -12,10 +12,28 @@ export interface Position {
 
 export const HE_SO_CONG_OPTIONS = [0, 0.5, 1, 1.5, 2, 3] as const;
 
+export const SHIFT_DAY_STATUSES = ['workday', 'off', 'annual_leave', 'compensatory_leave'] as const;
+export type ShiftDayStatus = (typeof SHIFT_DAY_STATUSES)[number];
+
+export const SHIFT_DAY_STATUS_LABELS: Record<ShiftDayStatus, string> = {
+  workday: 'Ngày làm việc',
+  off: 'Ngày nghỉ',
+  annual_leave: 'Nghỉ phép',
+  compensatory_leave: 'Nghỉ bù',
+};
+
+export function isLeaveDayStatus(status: ShiftDayStatus): boolean {
+  return status === 'annual_leave' || status === 'compensatory_leave';
+}
+
+export function defaultHeSoCongForStatus(status: ShiftDayStatus): string {
+  return status === 'off' ? '0' : '1';
+}
+
 export interface ShiftType {
   code: string;
   name: string;
-  isWorking: boolean;
+  dayStatus: ShiftDayStatus;
   startTime: string | null;
   endTime: string | null;
   breakMinutes: number;
@@ -26,7 +44,7 @@ export interface ShiftType {
 export interface ShiftDraft {
   code: string;
   name: string;
-  isWorking: boolean;
+  dayStatus: ShiftDayStatus;
   startTime: string;
   endTime: string;
   breakMinutes: string;
@@ -39,14 +57,14 @@ const MINUTES_PER_DAY = 24 * 60;
 const MAX_BREAK_MINUTES = 720;
 
 export function createEmptyShiftDraft(): ShiftDraft {
-  return { code: '', name: '', isWorking: true, startTime: '08:00', endTime: '17:00', breakMinutes: '60', heSoCong: '1' };
+  return { code: '', name: '', dayStatus: 'workday', startTime: '08:00', endTime: '17:00', breakMinutes: '60', heSoCong: '1' };
 }
 
 export function shiftDraftFromType(shift: ShiftType): ShiftDraft {
   return {
     code: shift.code,
     name: shift.name,
-    isWorking: shift.isWorking,
+    dayStatus: shift.dayStatus,
     startTime: shift.startTime ?? '',
     endTime: shift.endTime ?? '',
     breakMinutes: String(shift.breakMinutes),
@@ -59,13 +77,15 @@ export function formatHeSoCong(value: number): string {
 }
 
 export function normalizeShiftDraft(draft: ShiftDraft): ShiftDraft {
+  const isWorking = draft.dayStatus === 'workday';
   return {
     ...draft,
     code: draft.code.trim().toUpperCase(),
     name: draft.name.trim(),
-    startTime: draft.isWorking ? draft.startTime : '',
-    endTime: draft.isWorking ? draft.endTime : '',
-    breakMinutes: draft.isWorking ? draft.breakMinutes.trim() : '0',
+    startTime: isWorking ? draft.startTime : '',
+    endTime: isWorking ? draft.endTime : '',
+    breakMinutes: isWorking ? draft.breakMinutes.trim() : '0',
+    heSoCong: isLeaveDayStatus(draft.dayStatus) ? '1' : draft.heSoCong,
   };
 }
 
@@ -79,8 +99,8 @@ export function parseBreakMinutes(value: string): number | null {
   return Number(value);
 }
 
-export function calculateStandardHours(draft: Pick<ShiftDraft, 'isWorking' | 'startTime' | 'endTime' | 'breakMinutes'>): number {
-  if (!draft.isWorking || !draft.startTime || !draft.endTime) return 0;
+export function calculateStandardHours(draft: Pick<ShiftDraft, 'dayStatus' | 'startTime' | 'endTime' | 'breakMinutes'>): number {
+  if (draft.dayStatus !== 'workday' || !draft.startTime || !draft.endTime) return 0;
   const breakMinutes = parseBreakMinutes(draft.breakMinutes) ?? 0;
   let span = toMinutes(draft.endTime) - toMinutes(draft.startTime);
   if (span <= 0) span += MINUTES_PER_DAY;
@@ -133,7 +153,7 @@ export function validateShiftDraft(draft: ShiftDraft, takenCodes: Set<string>, i
     return 'Hệ số công phải là 0, 0.5, 1, 1.5, 2 hoặc 3.';
   }
 
-  if (normalized.isWorking) {
+  if (normalized.dayStatus === 'workday') {
     if (!normalized.startTime || !normalized.endTime) return 'Vui lòng chọn giờ bắt đầu và giờ kết thúc.';
     if (normalized.startTime === normalized.endTime) return 'Giờ bắt đầu và giờ kết thúc không được trùng nhau.';
     const span = toMinutes(normalized.endTime) - toMinutes(normalized.startTime);

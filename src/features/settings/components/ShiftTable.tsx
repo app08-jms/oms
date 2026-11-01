@@ -8,6 +8,8 @@ import {
   formatHeSoCong,
   formatShiftTime,
   formatStandardHours,
+  SHIFT_DAY_STATUS_LABELS,
+  type ShiftDayStatus,
   type ShiftType,
 } from '@/features/settings/settingsRules';
 import { cn } from '@/lib/utils';
@@ -22,6 +24,12 @@ interface ShiftTableProps {
 
 const COLUMN_COUNT = 9;
 const HEAD_CLASS = 'whitespace-nowrap text-[#5C6670]';
+const DAY_STATUS_BADGE_CLASS: Record<ShiftDayStatus, string> = {
+  workday: 'border-transparent bg-success/10 text-success hover:bg-success/10',
+  off: 'border-[#E2E8F0] bg-[#F1F5F9] text-[#5C6670] hover:bg-[#F1F5F9]',
+  annual_leave: 'border-[#4F7284]/30 bg-[#4F7284]/10 text-[#3F5C6C] hover:bg-[#4F7284]/10',
+  compensatory_leave: 'border-[#E7C98A] bg-[#FDF6E3] text-[#7A5300] hover:bg-[#FDF6E3]',
+};
 
 export function ShiftTable({ rows, isLoading, isSaving, onEdit, onDelete }: ShiftTableProps) {
   return (
@@ -58,9 +66,10 @@ export function ShiftTable({ rows, isLoading, isSaving, onEdit, onDelete }: Shif
             )}
             {!isLoading &&
               rows.map((shift, index) => {
-                const breakMinutes = shift.isWorking ? shift.breakMinutes : 0;
+                const isWorking = shift.dayStatus === 'workday';
+                const breakMinutes = isWorking ? shift.breakMinutes : 0;
                 const hours = calculateStandardHours({
-                  isWorking: shift.isWorking,
+                  dayStatus: shift.dayStatus,
                   startTime: shift.startTime?.slice(0, 5) ?? '',
                   endTime: shift.endTime?.slice(0, 5) ?? '',
                   breakMinutes: String(breakMinutes),
@@ -75,18 +84,12 @@ export function ShiftTable({ rows, isLoading, isSaving, onEdit, onDelete }: Shif
                     </TableCell>
                     <TableCell className="whitespace-nowrap font-medium text-[#1F2A30]">{shift.name}</TableCell>
                     <TableCell>
-                      {shift.isWorking ? (
-                        <Badge className="whitespace-nowrap border-transparent bg-success/10 px-2.5 py-0.5 font-medium text-success hover:bg-success/10">
-                          Ngày làm việc
-                        </Badge>
-                      ) : (
-                        <Badge className="whitespace-nowrap border-[#E2E8F0] bg-[#F1F5F9] px-2.5 py-0.5 font-medium text-[#5C6670] hover:bg-[#F1F5F9]">
-                          Ngày nghỉ
-                        </Badge>
-                      )}
+                      <Badge className={cn('whitespace-nowrap px-2.5 py-0.5 font-medium', DAY_STATUS_BADGE_CLASS[shift.dayStatus])}>
+                        {SHIFT_DAY_STATUS_LABELS[shift.dayStatus]}
+                      </Badge>
                     </TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums text-[#1F2A30]">
-                      {shift.isWorking
+                      {isWorking
                         ? `${formatShiftTime(shift.startTime)} - ${formatShiftTime(shift.endTime)}`
                         : '--:--'}
                     </TableCell>
