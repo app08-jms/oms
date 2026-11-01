@@ -122,20 +122,13 @@ export function EmployeeProfilesPage() {
 
   async function handleCreateConfirm(options: ProvisioningOptions) {
     if (!pendingCreate) return;
-    const result = await employees.createProfiles(pendingCreate.drafts, options);
-    if (!result) return;
+    const saved = await employees.createProfiles(pendingCreate.drafts, options);
+    if (!saved) return;
     setPendingCreate(null);
 
     const count = pendingCreate.drafts.length;
-    if (result.incompleteCodes.length > 0) {
-      toast({
-        title: 'Đã lưu hồ sơ nhưng chưa hoàn tất thiết lập.',
-        description: `Chưa hoàn tất cho: ${result.incompleteCodes.join(', ')}. Vui lòng thử lại sau.`,
-      });
-      return;
-    }
     toast({
-      title: pendingCreate.source === 'add' ? 'Đã thêm nhân viên mới.' : `Đã nhập ${count} nhân viên.`,
+      title: pendingCreate.source === 'add' ? 'Thêm hồ sơ nhân viên thành công!' : `Đã nhập ${count} nhân viên.`,
     });
   }
 

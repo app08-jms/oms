@@ -33,10 +33,10 @@ export function ProvisioningConfirmDialog({
   const [validationError, setValidationError] = useState<string | null>(null);
 
   function handleConfirm() {
-    const initialLeaveDays = Number(leaveDaysText);
+    const parsedDays = leaveDaysText.trim() === '' ? DEFAULT_INITIAL_LEAVE_DAYS : Number(leaveDaysText);
     if (
       trackLeave &&
-      (!Number.isInteger(initialLeaveDays) || initialLeaveDays < 0 || initialLeaveDays > MAX_LEAVE_DAYS)
+      (!Number.isInteger(parsedDays) || parsedDays < 0 || parsedDays > MAX_LEAVE_DAYS)
     ) {
       setValidationError(`Số ngày phép ban đầu phải là số nguyên từ 0 đến ${MAX_LEAVE_DAYS}.`);
       return;
@@ -44,7 +44,7 @@ export function ProvisioningConfirmDialog({
     setValidationError(null);
     onConfirm({
       trackLeave,
-      initialLeaveDays: trackLeave ? initialLeaveDays : DEFAULT_INITIAL_LEAVE_DAYS,
+      initialLeaveDays: trackLeave ? parsedDays : DEFAULT_INITIAL_LEAVE_DAYS,
     });
   }
 

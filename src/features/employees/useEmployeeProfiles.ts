@@ -5,7 +5,6 @@ import {
   fetchEmployeeProfiles,
   setLeaveTracking as setLeaveTrackingRequest,
   updateEmployeeProfile,
-  type CreateEmployeesResult,
   type DeleteEmployeeOutcome,
 } from '@/features/employees/employeeService';
 import type { EmployeeDraft, EmployeeProfile, ProvisioningOptions } from '@/features/employees/employeeRules';
@@ -58,8 +57,9 @@ export function useEmployeeProfiles(token: string, hotelScopeId: string | null, 
     }
   }
 
-  function createProfiles(drafts: EmployeeDraft[], options: ProvisioningOptions): Promise<CreateEmployeesResult | null> {
-    return runAction(() => createEmployees(drafts, options), 'Không thể lưu hồ sơ. Vui lòng thử lại.');
+  async function createProfiles(drafts: EmployeeDraft[], options: ProvisioningOptions): Promise<boolean> {
+    const result = await runAction(() => createEmployees(drafts, options), 'Không thể lưu hồ sơ. Vui lòng thử lại.');
+    return result !== null;
   }
 
   async function updateProfile(code: string, draft: EmployeeDraft): Promise<boolean> {

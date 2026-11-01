@@ -34,10 +34,6 @@ interface EmployeeProfileRow {
 
 export type DeleteEmployeeOutcome = 'deleted' | 'resigned' | 'has_data';
 
-export interface CreateEmployeesResult {
-  incompleteCodes: string[];
-}
-
 function isProfileRow(value: unknown): value is EmployeeProfileRow {
   if (typeof value !== 'object' || value === null) return false;
   const row = value as Record<string, unknown>;
@@ -85,7 +81,7 @@ function toProfilePayload(draft: EmployeeDraft) {
     full_name: values.fullName,
     display_name: values.displayName || null,
     department: values.department,
-    position: values.position || null,
+    position: values.position,
     probation_date: values.probationDate || null,
     official_date: values.officialDate || null,
     employment_status: values.employmentStatus,
@@ -165,21 +161,15 @@ export async function setLeaveTracking(code: string, enabled: boolean): Promise<
   if (enabled) await applyLeaveOpening(code);
 }
 
-export async function createEmployees(
-  drafts: EmployeeDraft[],
-  options: ProvisioningOptions
-): Promise<CreateEmployeesResult> {
+export async function createEmployees(drafts: EmployeeDraft[], options: ProvisioningOptions): Promise<void> {
   await insertEmployees(drafts, options);
-
-  const incompleteCodes: string[] = [];
-  if (!options.trackLeave) return { incompleteCodes };
+  if (!options.trackLeave) return;
   for (const draft of drafts) {
     const code = normalizeDraft(draft).code;
     try {
       await applyLeaveOpening(code);
-    } catch {
-      incompleteCodes.push(code);
+    } catch (cause) {
+      console.error('Leave opening failed for employee', code, cause);
     }
   }
-  return { incompleteCodes };
 }
