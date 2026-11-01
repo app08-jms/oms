@@ -1,5 +1,0 @@
-[functions.provision-employee-account]
-verify_jwt = true
-
-[functions.manage-user-accounts]
-verify_jwt = true

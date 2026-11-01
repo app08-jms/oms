@@ -50,7 +50,7 @@ export function EmployeeProfilesPage() {
   const canCreateAccount = isSuperAdmin || account?.roleKey === ADMIN_ROLE_KEY;
   const viewerHotelId = session?.hotel.id ?? '';
   const hotelScopeId = isSuperAdmin ? null : viewerHotelId;
-  const viewerSystemUid = account?.systemUid ?? null;
+  const sessionToken = session?.token ?? '';
 
   const loadHotels = useCallback(
     (): Promise<HotelRef[]> => (account ? fetchAccountHotels(account) : Promise.resolve([])),
@@ -63,12 +63,12 @@ export function EmployeeProfilesPage() {
 
   const loadOwnProfile = useCallback(
     (): Promise<EmployeeProfile | null> =>
-      isStaffView && viewerSystemUid ? fetchOwnEmployeeProfile(viewerSystemUid) : Promise.resolve(null),
-    [isStaffView, viewerSystemUid]
+      isStaffView && sessionToken ? fetchOwnEmployeeProfile(sessionToken) : Promise.resolve(null),
+    [isStaffView, sessionToken]
   );
   const ownProfile = useCatalogResource(loadOwnProfile, 'Không thể tải hồ sơ của bạn.');
 
-  const employees = useEmployeeProfiles(hotelScopeId, !isStaffView);
+  const employees = useEmployeeProfiles(sessionToken, hotelScopeId, !isStaffView);
   const roles = useRoles();
   const creatableRoles = (roles.data ?? []).filter((role) => canViewerCreateRole(account?.roleKey ?? '', role.key));
   const [filters, setFilters] = useState<EmployeeFilters>(() => ({

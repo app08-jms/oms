@@ -15,7 +15,7 @@ function messageOf(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
-export function useEmployeeProfiles(hotelScopeId: string | null, enabled: boolean) {
+export function useEmployeeProfiles(token: string, hotelScopeId: string | null, enabled: boolean) {
   const [profiles, setProfiles] = useState<EmployeeProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -30,14 +30,14 @@ export function useEmployeeProfiles(hotelScopeId: string | null, enabled: boolea
     }
     setIsLoading(true);
     try {
-      setProfiles(await fetchEmployeeProfiles(hotelScopeId));
+      setProfiles(await fetchEmployeeProfiles(token, hotelScopeId));
       setLoadError(null);
     } catch {
       setLoadError('Không thể tải danh sách nhân viên. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
-  }, [enabled, hotelScopeId]);
+  }, [enabled, hotelScopeId, token]);
 
   useEffect(() => {
     void refresh();

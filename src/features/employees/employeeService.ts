@@ -7,9 +7,6 @@ import {
   type ProvisioningOptions,
 } from '@/features/employees/employeeRules';
 
-const PROFILE_COLUMNS =
-  'system_uid, code, full_name, display_name, department, position, probation_date, official_date, employment_status, phone, email, has_account, app_user_system_uid, leave_tracking, initial_leave_days, hotel_id, citizen_id, citizen_id_issued_date, citizen_id_issued_place, permanent_address';
-
 const DUPLICATE_CODE_MESSAGE = 'Mã NV đã tồn tại trong danh sách.';
 
 interface EmployeeProfileRow {
@@ -107,27 +104,20 @@ function toDatabaseError(error: { code?: string; message: string }, fallback: st
   return new Error(fallback);
 }
 
-export async function fetchEmployeeProfiles(hotelScopeId: string | null): Promise<EmployeeProfile[]> {
-  let query = supabase.from('employees').select(PROFILE_COLUMNS);
-  if (hotelScopeId) query = query.eq('hotel_id', hotelScopeId);
-  const { data, error } = await query.order('code', { ascending: true });
+export async function fetchEmployeeProfiles(token: string, hotelScopeId: string | null): Promise<EmployeeProfile[]> {
+  const { data, error } = await supabase.rpc('list_employee_profiles', {
+    p_token: token,
+    p_hotel_id: hotelScopeId,
+  });
 
   if (error) throw error;
   if (!Array.isArray(data) || !data.every(isProfileRow)) throw new Error('Dữ liệu hồ sơ nhân viên không hợp lệ.');
   return data.map(toProfile);
 }
 
-export async function fetchOwnEmployeeProfile(accountSystemUid: string): Promise<EmployeeProfile | null> {
-  const { data, error } = await supabase
-    .from('employees')
-    .select(PROFILE_COLUMNS)
-    .eq('app_user_system_uid', accountSystemUid)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (data === null) return null;
-  if (!isProfileRow(data)) throw new Error('Dữ liệu hồ sơ nhân viên không hợp lệ.');
-  return toProfile(data);
+export async function fetchOwnEmployeeProfile(token: string): Promise<EmployeeProfile | null> {
+  const profiles = await fetchEmployeeProfiles(token, null);
+  return profiles[0] ?? null;
 }
 
 export async function insertEmployees(drafts: EmployeeDraft[], options: ProvisioningOptions): Promise<void> {

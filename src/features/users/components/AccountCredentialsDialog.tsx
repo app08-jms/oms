@@ -37,7 +37,7 @@ export function AccountCredentialsDialog({
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium text-[#1F2A30]">Đặt lại mật khẩu</span>
               <span className="text-xs text-[#5C6670]">
-                Mật khẩu sẽ được đặt về mặc định {DEFAULT_ACCOUNT_PASSWORD}.
+                Mật khẩu mặc định khi tạo tài khoản là: {DEFAULT_ACCOUNT_PASSWORD}.
               </span>
             </div>
             <Button
