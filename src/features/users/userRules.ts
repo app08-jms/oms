@@ -1,4 +1,4 @@
-export const DEFAULT_ACCOUNT_PASSWORD = 'Jenius@2026';
+export const DEFAULT_ACCOUNT_PASSWORD = '123';
 
 export const USERNAME_PATTERN = /^[A-Za-z0-9._-]{3,30}$/;
 

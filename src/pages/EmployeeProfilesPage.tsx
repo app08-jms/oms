@@ -7,7 +7,9 @@ import { fetchAccountHotels } from '@/features/auth/authService';
 import type { HotelRef } from '@/features/auth/authRules';
 import { toast } from '@/hooks/use-toast';
 import { useCatalogResource } from '@/hooks/useCatalogResource';
-import { SUPER_ADMIN_ROLE_KEY } from '@/features/permissions/permissionRules';
+import { SUPER_ADMIN_ROLE_KEY, canViewerCreateRole } from '@/features/permissions/permissionRules';
+import { useRoles } from '@/features/permissions/useRoles';
+import { DEFAULT_ACCOUNT_PASSWORD } from '@/features/users/userRules';
 import {
   applyEmployeeFilters,
   createEmptyDraft,
@@ -21,6 +23,7 @@ import {
 import { downloadEmployeeTemplate } from '@/features/employees/employeeExcel';
 import { fetchOwnEmployeeProfile } from '@/features/employees/employeeService';
 import { useEmployeeProfiles } from '@/features/employees/useEmployeeProfiles';
+import { CreateEmployeeAccountDialog } from '@/features/employees/components/CreateEmployeeAccountDialog';
 import { EmployeeDeleteDialog } from '@/features/employees/components/EmployeeDeleteDialog';
 import { EmployeeFilterBar } from '@/features/employees/components/EmployeeFilterBar';
 import { EmployeeFormDialog } from '@/features/employees/components/EmployeeFormDialog';
@@ -30,6 +33,7 @@ import { EmployeeTable } from '@/features/employees/components/EmployeeTable';
 import { ProvisioningConfirmDialog } from '@/features/employees/components/ProvisioningConfirmDialog';
 
 const STAFF_ROLE_KEY = 'staff';
+const ADMIN_ROLE_KEY = 'admin';
 
 type FormState = { mode: 'add' } | { mode: 'edit'; profile: EmployeeProfile };
 
@@ -43,6 +47,7 @@ export function EmployeeProfilesPage() {
   const account = session?.account;
   const isSuperAdmin = account?.roleKey === SUPER_ADMIN_ROLE_KEY;
   const isStaffView = account?.roleKey === STAFF_ROLE_KEY;
+  const canCreateAccount = isSuperAdmin || account?.roleKey === ADMIN_ROLE_KEY;
   const viewerHotelId = session?.hotel.id ?? '';
   const hotelScopeId = isSuperAdmin ? null : viewerHotelId;
   const viewerSystemUid = account?.systemUid ?? null;
@@ -64,6 +69,8 @@ export function EmployeeProfilesPage() {
   const ownProfile = useCatalogResource(loadOwnProfile, 'Không thể tải hồ sơ của bạn.');
 
   const employees = useEmployeeProfiles(hotelScopeId, !isStaffView);
+  const roles = useRoles();
+  const creatableRoles = (roles.data ?? []).filter((role) => canViewerCreateRole(account?.roleKey ?? '', role.key));
   const [filters, setFilters] = useState<EmployeeFilters>(() => ({
     ...DEFAULT_EMPLOYEE_FILTERS,
     hotelId: hotelScopeId ?? 'all',
@@ -72,6 +79,8 @@ export function EmployeeProfilesPage() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [pendingCreate, setPendingCreate] = useState<PendingCreate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EmployeeProfile | null>(null);
+  const [deleteHint, setDeleteHint] = useState<string | null>(null);
+  const [accountTarget, setAccountTarget] = useState<EmployeeProfile | null>(null);
 
   const takenCodes = useMemo(() => new Set(employees.profiles.map((profile) => profile.code)), [employees.profiles]);
   const rows = useMemo(() => applyEmployeeFilters(employees.profiles, filters), [employees.profiles, filters]);
@@ -130,12 +139,49 @@ export function EmployeeProfilesPage() {
     });
   }
 
-  async function handleDeleteConfirm() {
-    if (!deleteTarget) return;
-    const deleted = await employees.deleteProfile(deleteTarget.code);
-    if (!deleted) return;
-    setDeleteTarget(null);
+  async function handleDeleteConfirm(force: boolean) {
+    if (!deleteTarget || !session) return;
+    setDeleteHint(null);
+    const outcome = await employees.deleteProfile(session.token, deleteTarget.code, force);
+    if (outcome === null) return;
+    if (outcome === 'has_data') {
+      setDeleteHint(
+        'Nhân viên này đang có dữ liệu chấm công hoặc lịch làm việc. Chọn "Xóa vĩnh viễn" để xóa toàn bộ dữ liệu liên quan.',
+      );
+      return;
+    }
+    closeDeleteDialog();
+    if (outcome === 'resigned') {
+      toast({
+        title: 'Đã chuyển nhân viên sang trạng thái Nghỉ việc.',
+        description: 'Hồ sơ đang có dữ liệu chấm công nên được giữ lại. Tài khoản liên kết (nếu có) đã bị khóa.',
+      });
+      return;
+    }
     toast({ title: 'Đã xóa hồ sơ nhân viên.' });
+  }
+
+  function closeDeleteDialog() {
+    setDeleteTarget(null);
+    setDeleteHint(null);
+  }
+
+  function openAccountDialog(profile: EmployeeProfile) {
+    employees.clearActionError();
+    void roles.refresh();
+    setAccountTarget(profile);
+  }
+
+  async function handleAccountCreate(values: { username: string; role: string }) {
+    if (!accountTarget || !session) return;
+    const created = await employees.createAccount(session.token, accountTarget, values);
+    if (!created) return;
+    setAccountTarget(null);
+    toast({
+      title: 'Tạo tài khoản thành công!',
+      description: `Tài khoản ${values.username} đã được tạo cho ${accountTarget.fullName}. Mật khẩu mặc định khi tạo tài khoản là: ${DEFAULT_ACCOUNT_PASSWORD}`,
+      className: 'border-success/40 text-success',
+    });
   }
 
   const pendingSummary = pendingCreate
@@ -204,7 +250,7 @@ export function EmployeeProfilesPage() {
           {pageLoadError}
         </p>
       )}
-      {!isStaffView && !formState && !pendingCreate && !isImportOpen && employees.actionError && (
+      {!isStaffView && !formState && !pendingCreate && !isImportOpen && !accountTarget && !deleteTarget && employees.actionError && (
         <p role="alert" className="rounded-md border border-error/40 bg-error/5 px-4 py-3 text-sm text-error">
           {employees.actionError}
         </p>
@@ -243,6 +289,8 @@ export function EmployeeProfilesPage() {
                   setDeleteTarget(profile);
                 }}
                 onToggleLeave={(profile, enabled) => void employees.setLeaveTracking(profile.code, enabled)}
+                canCreateAccount={canCreateAccount}
+                onCreateAccount={openAccountDialog}
               />
             </div>
             {!employees.isLoading && (
@@ -305,13 +353,26 @@ export function EmployeeProfilesPage() {
         />
       )}
 
+      {accountTarget && (
+        <CreateEmployeeAccountDialog
+          profile={accountTarget}
+          hotelName={hotelNameById.get(accountTarget.hotelId) ?? ''}
+          roles={creatableRoles}
+          isSaving={employees.isSaving}
+          errorMessage={employees.actionError}
+          onCancel={() => setAccountTarget(null)}
+          onSubmit={(values) => void handleAccountCreate(values)}
+        />
+      )}
+
       {deleteTarget && (
         <EmployeeDeleteDialog
           profile={deleteTarget}
+          canForceDelete={isSuperAdmin}
           isDeleting={employees.isSaving}
-          errorMessage={employees.actionError}
-          onCancel={() => setDeleteTarget(null)}
-          onConfirm={() => void handleDeleteConfirm()}
+          errorMessage={deleteHint ?? employees.actionError}
+          onCancel={closeDeleteDialog}
+          onConfirm={(force) => void handleDeleteConfirm(force)}
         />
       )}
     </div>

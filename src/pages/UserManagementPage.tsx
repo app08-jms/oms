@@ -90,7 +90,7 @@ export function UserManagementPage() {
     setDialog(null);
     toast({
       title: 'Tạo tài khoản thành công!',
-      description: `Mật khẩu ban đầu: ${DEFAULT_ACCOUNT_PASSWORD}`,
+      description: `Mật khẩu mặc định khi tạo tài khoản là: ${DEFAULT_ACCOUNT_PASSWORD}`,
       className: 'border-success/40 text-success',
     });
   }
@@ -126,8 +126,9 @@ export function UserManagementPage() {
   }
 
   async function handleResetConfirm(account: UserAccountRow) {
+    if (!session) return;
     const saved = await catalog.runAction(
-      () => resetAccountPassword(account.systemUid),
+      () => resetAccountPassword(session.token, account.systemUid),
       'Không thể đặt lại mật khẩu. Vui lòng thử lại.',
     );
     if (!saved) return;

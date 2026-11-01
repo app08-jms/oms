@@ -2,7 +2,6 @@ import { DEPARTMENTS } from '@/config/schedule';
 import { normalizeSearchText } from '@/lib/text';
 
 export const DEFAULT_INITIAL_LEAVE_DAYS = 12;
-export const INITIAL_ACCOUNT_PASSWORD = 'Jenius@2026';
 export const FILTER_DEPARTMENTS = ['Lễ tân', 'Buồng phòng', 'F&B', 'Bếp'] as const;
 
 export const EMPLOYMENT_STATUSES = ['probation', 'official', 'resigned'] as const;
@@ -15,6 +14,7 @@ export const EMPLOYMENT_STATUS_LABELS: Record<EmploymentStatus, string> = {
 };
 
 export interface EmployeeProfile {
+  systemUid: string;
   code: string;
   fullName: string;
   displayName: string;
@@ -55,7 +55,6 @@ export interface EmployeeDraft {
 }
 
 export interface ProvisioningOptions {
-  createAccount: boolean;
   trackLeave: boolean;
   initialLeaveDays: number;
 }

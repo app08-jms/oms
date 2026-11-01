@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, UserPlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -16,6 +16,8 @@ interface EmployeeTableProps {
   onEdit: (profile: EmployeeProfile) => void;
   onDelete: (profile: EmployeeProfile) => void;
   onToggleLeave: (profile: EmployeeProfile, enabled: boolean) => void;
+  canCreateAccount: boolean;
+  onCreateAccount: (profile: EmployeeProfile) => void;
 }
 
 const COLUMN_COUNT = 15;
@@ -37,6 +39,8 @@ export function EmployeeTable({
   onEdit,
   onDelete,
   onToggleLeave,
+  canCreateAccount,
+  onCreateAccount,
 }: EmployeeTableProps) {
   return (
     <div className="overflow-x-auto">
@@ -137,6 +141,20 @@ export function EmployeeTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">
+                    {canCreateAccount && !profile.hasAccount && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Tạo tài khoản cho ${profile.fullName}`}
+                        disabled={isSaving}
+                        onClick={() => onCreateAccount(profile)}
+                        className="h-8 gap-1.5 whitespace-nowrap px-2 text-[#4F7284] hover:bg-[#4F7284]/10 hover:text-[#3F5C6C]"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        Tạo tài khoản
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       variant="ghost"

@@ -6,8 +6,10 @@ import {
   setLeaveTracking as setLeaveTrackingRequest,
   updateEmployeeProfile,
   type CreateEmployeesResult,
+  type DeleteEmployeeOutcome,
 } from '@/features/employees/employeeService';
 import type { EmployeeDraft, EmployeeProfile, ProvisioningOptions } from '@/features/employees/employeeRules';
+import { createUserAccount } from '@/features/users/userService';
 
 function messageOf(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -65,9 +67,27 @@ export function useEmployeeProfiles(hotelScopeId: string | null, enabled: boolea
     return result !== null;
   }
 
-  async function deleteProfile(code: string): Promise<boolean> {
-    const result = await runAction(() => deleteEmployeeProfile(code), 'Không thể xóa nhân viên.');
-    return result !== null;
+  async function deleteProfile(token: string, code: string, force: boolean): Promise<DeleteEmployeeOutcome | null> {
+    return runAction(() => deleteEmployeeProfile(token, code, force), 'Không thể xóa nhân viên.');
+  }
+
+  async function createAccount(
+    token: string,
+    profile: EmployeeProfile,
+    values: { username: string; role: string },
+  ): Promise<boolean> {
+    const result = await runAction(
+      () =>
+        createUserAccount(token, {
+          employeeSystemUid: profile.systemUid,
+          hotelId: profile.hotelId,
+          username: values.username,
+          fullName: profile.fullName,
+          role: values.role,
+        }).then(() => true),
+      'Không thể tạo tài khoản. Vui lòng thử lại.',
+    );
+    return result === true;
   }
 
   async function setLeaveTracking(code: string, enabled: boolean): Promise<boolean> {
@@ -88,6 +108,7 @@ export function useEmployeeProfiles(hotelScopeId: string | null, enabled: boolea
     createProfiles,
     updateProfile,
     deleteProfile,
+    createAccount,
     setLeaveTracking,
   };
 }

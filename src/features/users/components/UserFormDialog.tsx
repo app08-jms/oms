@@ -77,7 +77,7 @@ export function UserFormDialog({
         <DialogHeader className="gap-2">
           <DialogTitle className="text-xl font-semibold text-[#1F2A30]">Thêm tài khoản mới</DialogTitle>
           <DialogDescription className="text-sm text-[#5C6670]">
-            Tài khoản mới dùng mật khẩu ban đầu {DEFAULT_ACCOUNT_PASSWORD}. Có thể liên kết với một hồ sơ nhân viên chưa có tài khoản khác.
+            Mật khẩu mặc định khi tạo tài khoản là: {DEFAULT_ACCOUNT_PASSWORD}. Có thể liên kết với một hồ sơ nhân viên chưa có tài khoản khác.
           </DialogDescription>
         </DialogHeader>
 

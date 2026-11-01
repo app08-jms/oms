@@ -1,4 +1,3 @@
-import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { type HotelRef } from '@/features/auth/authRules';
 import {
@@ -88,20 +87,6 @@ function assertRows<T>(data: unknown, guard: (value: unknown) => value is T): T[
   return data;
 }
 
-async function functionErrorMessage(error: unknown, fallback: string): Promise<string> {
-  if (error instanceof FunctionsHttpError) {
-    const body = (await error.context.json().catch(() => null)) as { error?: unknown } | null;
-    if (typeof body?.error === 'string') return body.error;
-  }
-  return fallback;
-}
-
-async function invokeAccountAction(body: Record<string, unknown>, fallback: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke<{ ok?: boolean }>('manage-user-accounts', { body });
-  if (error) throw new Error(await functionErrorMessage(error, fallback));
-  if (data?.ok !== true) throw new Error(fallback);
-}
-
 export async function fetchUserAccounts(): Promise<{
   accounts: UserAccountRow[];
   employees: EmployeeOption[];
@@ -175,11 +160,10 @@ export async function createUserAccount(token: string, draft: NewAccountDraft): 
   if (error) throw new Error(CREATE_ERROR);
 }
 
-export async function resetAccountPassword(systemUid: string): Promise<void> {
-  await invokeAccountAction(
-    { action: 'reset_password', system_uid: systemUid },
-    'Không thể đặt lại mật khẩu. Vui lòng thử lại.',
-  );
+export async function resetAccountPassword(token: string, systemUid: string): Promise<void> {
+  const { error } = await supabase.rpc('reset_app_user_password', { p_token: token, p_system_uid: systemUid });
+  if (error?.code === INSUFFICIENT_PRIVILEGE) throw new Error(CREATE_PERMISSION_ERROR);
+  if (error) throw new Error('Không thể đặt lại mật khẩu. Vui lòng thử lại.');
 }
 
 async function updateAppUser(

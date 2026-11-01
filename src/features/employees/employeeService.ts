@@ -8,11 +8,12 @@ import {
 } from '@/features/employees/employeeRules';
 
 const PROFILE_COLUMNS =
-  'code, full_name, display_name, department, position, probation_date, official_date, employment_status, phone, email, has_account, app_user_system_uid, leave_tracking, initial_leave_days, hotel_id, citizen_id, citizen_id_issued_date, citizen_id_issued_place, permanent_address';
+  'system_uid, code, full_name, display_name, department, position, probation_date, official_date, employment_status, phone, email, has_account, app_user_system_uid, leave_tracking, initial_leave_days, hotel_id, citizen_id, citizen_id_issued_date, citizen_id_issued_place, permanent_address';
 
 const DUPLICATE_CODE_MESSAGE = 'Mã NV đã tồn tại trong danh sách.';
 
 interface EmployeeProfileRow {
+  system_uid: string;
   code: string;
   full_name: string;
   display_name: string | null;
@@ -34,6 +35,8 @@ interface EmployeeProfileRow {
   permanent_address: string | null;
 }
 
+export type DeleteEmployeeOutcome = 'deleted' | 'resigned' | 'has_data';
+
 export interface CreateEmployeesResult {
   incompleteCodes: string[];
 }
@@ -42,6 +45,7 @@ function isProfileRow(value: unknown): value is EmployeeProfileRow {
   if (typeof value !== 'object' || value === null) return false;
   const row = value as Record<string, unknown>;
   return (
+    typeof row.system_uid === 'string' &&
     typeof row.code === 'string' &&
     typeof row.full_name === 'string' &&
     typeof row.department === 'string' &&
@@ -55,6 +59,7 @@ function isProfileRow(value: unknown): value is EmployeeProfileRow {
 
 function toProfile(row: EmployeeProfileRow): EmployeeProfile {
   return {
+    systemUid: row.system_uid,
     code: row.code,
     fullName: row.full_name,
     displayName: row.display_name ?? '',
@@ -99,9 +104,6 @@ function toProfilePayload(draft: EmployeeDraft) {
 
 function toDatabaseError(error: { code?: string; message: string }, fallback: string): Error {
   if (error.code === '23505') return new Error(DUPLICATE_CODE_MESSAGE);
-  if (error.code === '23503') {
-    return new Error('Nhân viên này đang có dữ liệu chấm công hoặc lịch làm việc nên chưa thể xóa.');
-  }
   return new Error(fallback);
 }
 
@@ -145,9 +147,21 @@ export async function updateEmployeeProfile(code: string, draft: EmployeeDraft):
   if (error) throw toDatabaseError(error, 'Không thể cập nhật hồ sơ. Vui lòng thử lại.');
 }
 
-export async function deleteEmployeeProfile(code: string): Promise<void> {
-  const { error } = await supabase.from('employees').delete().eq('code', code);
-  if (error) throw toDatabaseError(error, 'Không thể xóa nhân viên. Vui lòng thử lại.');
+export async function deleteEmployeeProfile(
+  token: string,
+  code: string,
+  force: boolean,
+): Promise<DeleteEmployeeOutcome> {
+  const { data, error } = await supabase.rpc('delete_employee_profile', {
+    p_token: token,
+    p_code: code,
+    p_force: force,
+  });
+  if (error?.code === '42501') throw new Error('Bạn không có quyền xóa nhân viên này.');
+  if (error?.code === 'P0002') throw new Error('Không tìm thấy hồ sơ nhân viên.');
+  if (error) throw new Error('Không thể xóa nhân viên. Vui lòng thử lại.');
+  if (data === 'deleted' || data === 'resigned' || data === 'has_data') return data;
+  throw new Error('Không thể xóa nhân viên. Vui lòng thử lại.');
 }
 
 export async function applyLeaveOpening(code: string): Promise<void> {
@@ -161,13 +175,6 @@ export async function setLeaveTracking(code: string, enabled: boolean): Promise<
   if (enabled) await applyLeaveOpening(code);
 }
 
-export async function provisionEmployeeAccount(code: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke<{ ok?: boolean }>('provision-employee-account', {
-    body: { employee_code: code },
-  });
-  if (error || data?.ok !== true) throw new Error(`Không thể tạo tài khoản cho ${code}.`);
-}
-
 export async function createEmployees(
   drafts: EmployeeDraft[],
   options: ProvisioningOptions
@@ -175,11 +182,11 @@ export async function createEmployees(
   await insertEmployees(drafts, options);
 
   const incompleteCodes: string[] = [];
+  if (!options.trackLeave) return { incompleteCodes };
   for (const draft of drafts) {
     const code = normalizeDraft(draft).code;
     try {
-      if (options.trackLeave) await applyLeaveOpening(code);
-      if (options.createAccount) await provisionEmployeeAccount(code);
+      await applyLeaveOpening(code);
     } catch {
       incompleteCodes.push(code);
     }
