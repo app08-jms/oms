@@ -1,11 +1,13 @@
 import { ChevronDown, KeyRound, Link2, Link2Off, Pencil, ShieldCheck } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ROLE_TONE_BADGE_CLASS, type RoleSummary } from '@/features/permissions/permissionRules';
+import type { HotelRef } from '@/features/auth/authRules';
 import type { UserAccountRow } from '@/features/users/userRules';
 
 interface UserTableProps {
   rows: UserAccountRow[];
   roles: RoleSummary[];
+  hotels: HotelRef[];
   hasAnyAccounts: boolean;
   isBusy: boolean;
   onEditDetails: (row: UserAccountRow) => void;
@@ -23,6 +25,7 @@ const MENU_ITEM_CLASS = 'cursor-pointer gap-2 text-sm text-[#1F2A30] focus:bg-[#
 export function UserTable({
   rows,
   roles,
+  hotels,
   hasAnyAccounts,
   isBusy,
   onEditDetails,
@@ -32,6 +35,7 @@ export function UserTable({
   onOverridePermissions,
 }: UserTableProps) {
   const roleByKey = new Map(roles.map((role) => [role.key, role]));
+  const hotelNameById = new Map(hotels.map((hotel) => [hotel.id, hotel.name]));
   return (
     <div className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-sm">
       <div className="overflow-x-auto">
@@ -42,6 +46,7 @@ export function UserTable({
               <th scope="col" className={HEAD_CLASS}>Username</th>
               <th scope="col" className={HEAD_CLASS}>Họ và tên</th>
               <th scope="col" className={HEAD_CLASS}>Bộ phận</th>
+              <th scope="col" className={HEAD_CLASS}>Khách sạn</th>
               <th scope="col" className={HEAD_CLASS}>Vai trò</th>
               <th scope="col" className={HEAD_CLASS}>Trạng thái</th>
               <th scope="col" className={HEAD_CLASS}>Liên kết hồ sơ</th>
@@ -51,7 +56,7 @@ export function UserTable({
           <tbody className="divide-y divide-[#E2E8F0]">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-sm text-[#5C6670]">
+                <td colSpan={9} className="px-4 py-12 text-center text-sm text-[#5C6670]">
                   {hasAnyAccounts ? 'Không có tài khoản phù hợp với bộ lọc.' : 'Chưa có tài khoản nào.'}
                 </td>
               </tr>
@@ -62,6 +67,19 @@ export function UserTable({
                 <td className={`${CELL_CLASS} font-medium`}>{row.username}</td>
                 <td className={CELL_CLASS}>{row.fullName}</td>
                 <td className={`${CELL_CLASS} text-[#5C6670]`}>{row.employee?.department ?? '—'}</td>
+                <td className={CELL_CLASS}>
+                  {row.hotelIds.length === 0 ? (
+                    <span className={`${BADGE_BASE} border-[#CBD5E1] bg-[#F1F5F9] text-[#334155]`}>Tất cả khách sạn</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {row.hotelIds.map((hotelId) => (
+                        <span key={hotelId} className={`${BADGE_BASE} border-[#4F7284]/20 bg-[#4F7284]/10 text-[#3D5B69]`}>
+                          {hotelNameById.get(hotelId) ?? 'Khách sạn không xác định'}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </td>
                 <td className={CELL_CLASS}>
                   <span className={`${BADGE_BASE} ${ROLE_TONE_BADGE_CLASS[roleByKey.get(row.role)?.tone ?? 'slate']}`}>
                     {roleByKey.get(row.role)?.name ?? row.role}

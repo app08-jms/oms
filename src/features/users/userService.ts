@@ -25,6 +25,11 @@ interface AppUserRow {
   employee_system_uid: string | null;
 }
 
+interface AppUserHotelRow {
+  app_user_system_uid: string;
+  hotel_id: string;
+}
+
 interface EmployeeRow {
   system_uid: string;
   code: string;
@@ -50,6 +55,11 @@ function isAppUserRow(value: unknown): value is AppUserRow {
     typeof row.is_active === 'boolean' &&
     (row.employee_system_uid === null || typeof row.employee_system_uid === 'string')
   );
+}
+
+function isAppUserHotelRow(value: unknown): value is AppUserHotelRow {
+  const row = value as AppUserHotelRow;
+  return typeof row?.app_user_system_uid === 'string' && typeof row.hotel_id === 'string';
 }
 
 function isEmployeeRow(value: unknown): value is EmployeeRow {
@@ -97,17 +107,26 @@ export async function fetchUserAccounts(): Promise<{
   employees: EmployeeOption[];
   hotels: HotelRef[];
 }> {
-  const [userResult, employeeResult, hotelResult] = await Promise.all([
+  const [userResult, employeeResult, hotelResult, userHotelResult] = await Promise.all([
     supabase
       .from('app_users')
       .select('system_uid, username, full_name, role, is_active, employee_system_uid')
       .order('username', { ascending: true }),
     supabase.from('employees').select('system_uid, code, full_name, department').order('code', { ascending: true }),
     supabase.from('hotels').select('id, system_hotel_id, name, address, id_prefix').order('name', { ascending: true }),
+    supabase.from('app_user_hotels').select('app_user_system_uid, hotel_id'),
   ]);
   if (userResult.error) throw userResult.error;
   if (employeeResult.error) throw employeeResult.error;
   if (hotelResult.error) throw hotelResult.error;
+  if (userHotelResult.error) throw userHotelResult.error;
+
+  const hotelIdsByUser = new Map<string, string[]>();
+  for (const link of assertRows(userHotelResult.data, isAppUserHotelRow)) {
+    const ids = hotelIdsByUser.get(link.app_user_system_uid) ?? [];
+    ids.push(link.hotel_id);
+    hotelIdsByUser.set(link.app_user_system_uid, ids);
+  }
 
   const employees = assertRows(employeeResult.data, isEmployeeRow).map((row) => ({
     systemUid: row.system_uid,
@@ -126,6 +145,7 @@ export async function fetchUserAccounts(): Promise<{
       isActive: row.is_active,
       employeeSystemUid: row.employee_system_uid,
       employee: row.employee_system_uid ? employeeByUid.get(row.employee_system_uid) ?? null : null,
+      hotelIds: hotelIdsByUser.get(row.system_uid) ?? [],
     };
   });
 

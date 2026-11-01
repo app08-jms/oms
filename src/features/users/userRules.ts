@@ -22,17 +22,20 @@ export interface EmployeeOption {
 
 export interface UserAccountRow extends AppUser {
   employee: EmployeeOption | null;
+  hotelIds: string[];
 }
 
 export interface UserFilters {
   role: 'all' | string;
   status: 'all' | 'active' | 'locked';
+  hotelId: 'all' | string;
   search: string;
 }
 
 export const DEFAULT_USER_FILTERS: UserFilters = {
   role: 'all',
   status: 'all',
+  hotelId: 'all',
   search: '',
 };
 
@@ -52,6 +55,7 @@ export function applyUserFilters(rows: UserAccountRow[], filters: UserFilters): 
   const query = filters.search.trim().toLowerCase();
   return rows.filter((row) => {
     if (filters.role !== 'all' && row.role !== filters.role) return false;
+    if (filters.hotelId !== 'all' && !row.hotelIds.includes(filters.hotelId)) return false;
     if (filters.status === 'active' && !row.isActive) return false;
     if (filters.status === 'locked' && row.isActive) return false;
     if (!query) return true;

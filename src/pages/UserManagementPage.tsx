@@ -54,6 +54,7 @@ export function UserManagementPage() {
   const creatableRoles = (roles.data ?? []).filter((role) => canViewerCreateRole(creatorRoleKey, role.key));
   const [filters, setFilters] = useState<UserFilters>(DEFAULT_USER_FILTERS);
   const [dialog, setDialog] = useState<DialogState>(null);
+  const activeFilters: UserFilters = isSuperAdmin || !session ? filters : { ...filters, hotelId: session.hotel.id };
 
   const accounts = catalog.data?.accounts ?? [];
   const employees = catalog.data?.employees ?? [];
@@ -64,8 +65,8 @@ export function UserManagementPage() {
   }, [accounts, employees]);
 
   const visibleRows = useMemo(
-    () => applyUserFilters(accounts.filter((account) => canViewerSeeRole(activeRoleKey, account.role)), filters),
-    [accounts, filters, activeRoleKey],
+    () => applyUserFilters(accounts.filter((account) => canViewerSeeRole(activeRoleKey, account.role)), activeFilters),
+    [accounts, activeFilters, activeRoleKey],
   );
 
   function openDialog(next: NonNullable<DialogState>) {
@@ -169,7 +170,13 @@ export function UserManagementPage() {
         </Button>
       </div>
 
-      <UserFilterBar filters={filters} roles={roleList} onFiltersChange={setFilters} />
+      <UserFilterBar
+        filters={activeFilters}
+        roles={roleList}
+        hotels={hotelOptions}
+        hotelLocked={!isSuperAdmin}
+        onFiltersChange={setFilters}
+      />
 
       {catalog.actionError && !dialog && (
         <p role="alert" className="rounded-md border border-error/40 bg-error/5 px-4 py-3 text-sm text-error">
@@ -200,6 +207,7 @@ export function UserManagementPage() {
         <UserTable
           rows={visibleRows}
           roles={roleList}
+          hotels={catalog.data?.hotels ?? []}
           hasAnyAccounts={accounts.length > 0}
           isBusy={catalog.isSaving}
           onEditDetails={(account) => openDialog({ kind: 'edit', account })}

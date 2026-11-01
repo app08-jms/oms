@@ -1,21 +1,48 @@
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { HotelRef } from '@/features/auth/authRules';
 import type { RoleSummary } from '@/features/permissions/permissionRules';
 import { type UserFilters } from '@/features/users/userRules';
 
 interface UserFilterBarProps {
   filters: UserFilters;
   roles: RoleSummary[];
+  hotels: HotelRef[];
+  hotelLocked: boolean;
   onFiltersChange: (filters: UserFilters) => void;
 }
 
 const selectTriggerClass = 'h-10 w-full border-[#E2E8F0] bg-white sm:w-[200px]';
 
-export function UserFilterBar({ filters, roles, onFiltersChange }: UserFilterBarProps) {
+export function UserFilterBar({ filters, roles, hotels, hotelLocked, onFiltersChange }: UserFilterBarProps) {
+  const lockedHotelName = hotels.find((hotel) => hotel.id === filters.hotelId)?.name ?? '';
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {hotelLocked ? (
+          <Input
+            readOnly
+            aria-label="Khách sạn"
+            value={lockedHotelName}
+            className="h-10 w-full border-[#E2E8F0] bg-[#F8FAFC] text-[#1F2A30] sm:w-[260px]"
+          />
+        ) : (
+          <Select value={filters.hotelId} onValueChange={(value) => onFiltersChange({ ...filters, hotelId: value })}>
+            <SelectTrigger aria-label="Lọc theo khách sạn" className={selectTriggerClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả khách sạn</SelectItem>
+              {hotels.map((hotel) => (
+                <SelectItem key={hotel.id} value={hotel.id}>
+                  {hotel.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
         <Select
           value={filters.role}
           onValueChange={(value) => onFiltersChange({ ...filters, role: value })}
