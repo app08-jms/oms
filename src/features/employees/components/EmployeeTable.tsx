@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 
 interface EmployeeTableProps {
   rows: EmployeeProfile[];
+  hotelNameById: Map<string, string>;
   isLoading: boolean;
   isSaving: boolean;
   emptyMessage: string;
@@ -17,7 +18,7 @@ interface EmployeeTableProps {
   onToggleLeave: (profile: EmployeeProfile, enabled: boolean) => void;
 }
 
-const COLUMN_COUNT = 13;
+const COLUMN_COUNT = 15;
 
 const HEAD_CLASS = 'whitespace-nowrap text-[#5C6670]';
 
@@ -27,7 +28,16 @@ const STATUS_BADGE_CLASS: Record<EmploymentStatus, string> = {
   resigned: 'border-[#E2E8F0] bg-[#F1F5F9] text-[#5C6670] hover:bg-[#F1F5F9]',
 };
 
-export function EmployeeTable({ rows, isLoading, isSaving, emptyMessage, onEdit, onDelete, onToggleLeave }: EmployeeTableProps) {
+export function EmployeeTable({
+  rows,
+  hotelNameById,
+  isLoading,
+  isSaving,
+  emptyMessage,
+  onEdit,
+  onDelete,
+  onToggleLeave,
+}: EmployeeTableProps) {
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -38,6 +48,8 @@ export function EmployeeTable({ rows, isLoading, isSaving, emptyMessage, onEdit,
             <TableHead className={HEAD_CLASS}>Họ và tên</TableHead>
             <TableHead className={HEAD_CLASS}>Tên hiển thị</TableHead>
             <TableHead className={HEAD_CLASS}>Bộ phận</TableHead>
+            <TableHead className={HEAD_CLASS}>Khách sạn</TableHead>
+            <TableHead className={HEAD_CLASS}>Số CCCD</TableHead>
             <TableHead className={HEAD_CLASS}>Chức vụ</TableHead>
             <TableHead className={HEAD_CLASS}>Ngày thử việc</TableHead>
             <TableHead className={HEAD_CLASS}>Ngày chính thức</TableHead>
@@ -78,6 +90,8 @@ export function EmployeeTable({ rows, isLoading, isSaving, emptyMessage, onEdit,
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-[#1F2A30]">{profile.displayName || '—'}</TableCell>
                 <TableCell className="whitespace-nowrap text-[#1F2A30]">{profile.department}</TableCell>
+                <TableCell className="whitespace-nowrap text-[#1F2A30]">{hotelNameById.get(profile.hotelId) ?? '—'}</TableCell>
+                <TableCell className="whitespace-nowrap tabular-nums text-[#1F2A30]">{profile.citizenId || '—'}</TableCell>
                 <TableCell className="whitespace-nowrap text-[#1F2A30]">{profile.position || '—'}</TableCell>
                 <TableCell className="whitespace-nowrap tabular-nums text-[#1F2A30]">
                   {formatDisplayDate(profile.probationDate)}

@@ -2,11 +2,17 @@ import { useState } from 'react';
 import { FileSpreadsheet, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { HotelRef } from '@/features/auth/authRules';
 import type { EmployeeDraft } from '@/features/employees/employeeRules';
 import { parseEmployeeWorkbook } from '@/features/employees/employeeExcel';
 
 interface EmployeeImportDialogProps {
   takenCodes: Set<string>;
+  hotels: HotelRef[];
+  hotelLocked: boolean;
+  defaultHotelId: string;
   onCancel: () => void;
   onReady: (drafts: EmployeeDraft[]) => void;
 }
@@ -19,17 +25,31 @@ interface ParsedImport {
 
 const MAX_SHOWN_ISSUES = 5;
 
-export function EmployeeImportDialog({ takenCodes, onCancel, onReady }: EmployeeImportDialogProps) {
+export function EmployeeImportDialog({
+  takenCodes,
+  hotels,
+  hotelLocked,
+  defaultHotelId,
+  onCancel,
+  onReady,
+}: EmployeeImportDialogProps) {
+  const [hotelId, setHotelId] = useState(defaultHotelId);
   const [parsed, setParsed] = useState<ParsedImport | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [readError, setReadError] = useState<string | null>(null);
+  const lockedHotelName = hotels.find((hotel) => hotel.id === defaultHotelId)?.name ?? '';
+
+  function handleHotelChange(nextHotelId: string) {
+    setHotelId(nextHotelId);
+    setParsed(null);
+  }
 
   async function handleFileChange(file: File | undefined) {
-    if (!file) return;
+    if (!file || !hotelId) return;
     setIsParsing(true);
     setReadError(null);
     try {
-      const result = await parseEmployeeWorkbook(file);
+      const result = await parseEmployeeWorkbook(file, hotelId);
       const importable: EmployeeDraft[] = [];
       const issues = result.errors.map((error) => `Dòng ${error.row}: ${error.message}`);
       result.drafts.forEach((draft) => {
@@ -62,6 +82,26 @@ export function EmployeeImportDialog({ takenCodes, onCancel, onReady }: Employee
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-[#1F2A30]">Khách sạn</span>
+            {hotelLocked ? (
+              <Input readOnly aria-label="Khách sạn" value={lockedHotelName} className="h-10 border-[#E2E8F0] bg-[#F8FAFC] text-[#1F2A30]" />
+            ) : (
+              <Select value={hotelId} onValueChange={handleHotelChange} disabled={isParsing}>
+                <SelectTrigger aria-label="Khách sạn" className="h-10 w-full border-[#E2E8F0] bg-white">
+                  <SelectValue placeholder="Chọn khách sạn" />
+                </SelectTrigger>
+                <SelectContent>
+                  {hotels.map((hotel) => (
+                    <SelectItem key={hotel.id} value={hotel.id}>
+                      {hotel.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
           <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-[#4F7284]/50 bg-[#F8FAFC] px-6 py-8 text-center transition-colors duration-200 hover:border-[#4F7284] hover:bg-[#4F7284]/5">
             {isParsing ? (
               <Loader2 className="h-8 w-8 animate-spin text-[#4F7284]" />
@@ -76,7 +116,7 @@ export function EmployeeImportDialog({ takenCodes, onCancel, onReady }: Employee
               type="file"
               accept=".xlsx,.xls"
               aria-label="Chọn file Excel"
-              disabled={isParsing}
+              disabled={isParsing || !hotelId}
               className="sr-only"
               onChange={(event) => {
                 void handleFileChange(event.target.files?.[0]);

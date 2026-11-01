@@ -8,7 +8,7 @@ import {
 } from '@/features/employees/employeeRules';
 
 const PROFILE_COLUMNS =
-  'code, full_name, display_name, department, position, probation_date, official_date, employment_status, phone, email, has_account, app_user_system_uid, leave_tracking, initial_leave_days';
+  'code, full_name, display_name, department, position, probation_date, official_date, employment_status, phone, email, has_account, app_user_system_uid, leave_tracking, initial_leave_days, hotel_id, citizen_id, citizen_id_issued_date, citizen_id_issued_place, permanent_address';
 
 const DUPLICATE_CODE_MESSAGE = 'Mã NV đã tồn tại trong danh sách.';
 
@@ -27,6 +27,11 @@ interface EmployeeProfileRow {
   app_user_system_uid: string | null;
   leave_tracking: boolean;
   initial_leave_days: number;
+  hotel_id: string;
+  citizen_id: string | null;
+  citizen_id_issued_date: string | null;
+  citizen_id_issued_place: string | null;
+  permanent_address: string | null;
 }
 
 export interface CreateEmployeesResult {
@@ -43,7 +48,8 @@ function isProfileRow(value: unknown): value is EmployeeProfileRow {
     typeof row.employment_status === 'string' &&
     typeof row.has_account === 'boolean' &&
     typeof row.leave_tracking === 'boolean' &&
-    typeof row.initial_leave_days === 'number'
+    typeof row.initial_leave_days === 'number' &&
+    typeof row.hotel_id === 'string'
   );
 }
 
@@ -63,6 +69,11 @@ function toProfile(row: EmployeeProfileRow): EmployeeProfile {
     appUserSystemUid: row.app_user_system_uid,
     leaveTracking: row.leave_tracking,
     initialLeaveDays: row.initial_leave_days,
+    hotelId: row.hotel_id,
+    citizenId: row.citizen_id ?? '',
+    citizenIdIssuedDate: row.citizen_id_issued_date,
+    citizenIdIssuedPlace: row.citizen_id_issued_place ?? '',
+    permanentAddress: row.permanent_address ?? '',
   };
 }
 
@@ -78,6 +89,11 @@ function toProfilePayload(draft: EmployeeDraft) {
     employment_status: values.employmentStatus,
     phone: values.phone || null,
     email: values.email || null,
+    hotel_id: values.hotelId,
+    citizen_id: values.citizenId || null,
+    citizen_id_issued_date: values.citizenIdIssuedDate || null,
+    citizen_id_issued_place: values.citizenIdIssuedPlace || null,
+    permanent_address: values.permanentAddress || null,
   };
 }
 
@@ -89,15 +105,27 @@ function toDatabaseError(error: { code?: string; message: string }, fallback: st
   return new Error(fallback);
 }
 
-export async function fetchEmployeeProfiles(): Promise<EmployeeProfile[]> {
-  const { data, error } = await supabase
-    .from('employees')
-    .select(PROFILE_COLUMNS)
-    .order('code', { ascending: true });
+export async function fetchEmployeeProfiles(hotelScopeId: string | null): Promise<EmployeeProfile[]> {
+  let query = supabase.from('employees').select(PROFILE_COLUMNS);
+  if (hotelScopeId) query = query.eq('hotel_id', hotelScopeId);
+  const { data, error } = await query.order('code', { ascending: true });
 
   if (error) throw error;
   if (!Array.isArray(data) || !data.every(isProfileRow)) throw new Error('Dữ liệu hồ sơ nhân viên không hợp lệ.');
   return data.map(toProfile);
+}
+
+export async function fetchOwnEmployeeProfile(accountSystemUid: string): Promise<EmployeeProfile | null> {
+  const { data, error } = await supabase
+    .from('employees')
+    .select(PROFILE_COLUMNS)
+    .eq('app_user_system_uid', accountSystemUid)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (data === null) return null;
+  if (!isProfileRow(data)) throw new Error('Dữ liệu hồ sơ nhân viên không hợp lệ.');
+  return toProfile(data);
 }
 
 export async function insertEmployees(drafts: EmployeeDraft[], options: ProvisioningOptions): Promise<void> {

@@ -4,13 +4,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { DEPARTMENTS } from '@/config/schedule';
+import type { HotelRef } from '@/features/auth/authRules';
 import { normalizeDraft, validateDraft, EMPLOYMENT_STATUSES, EMPLOYMENT_STATUS_LABELS, type EmployeeDraft } from '@/features/employees/employeeRules';
 
 interface EmployeeFormDialogProps {
   mode: 'add' | 'edit';
   initialDraft: EmployeeDraft;
   takenCodes: Set<string>;
+  hotels: HotelRef[];
+  hotelLocked: boolean;
   isSaving: boolean;
   errorMessage: string | null;
   onCancel: () => void;
@@ -34,6 +38,8 @@ export function EmployeeFormDialog({
   mode,
   initialDraft,
   takenCodes,
+  hotels,
+  hotelLocked,
   isSaving,
   errorMessage,
   onCancel,
@@ -186,7 +192,73 @@ export function EmployeeFormDialog({
                 </SelectContent>
               </Select>
             </Field>
+            <Field label="Khách sạn" htmlFor="employee-hotel">
+              {hotelLocked ? (
+                <Input
+                  id="employee-hotel"
+                  readOnly
+                  value={hotels.find((hotel) => hotel.id === draft.hotelId)?.name ?? ''}
+                  className={`${fieldClass} bg-[#F8FAFC]`}
+                />
+              ) : (
+                <Select value={draft.hotelId} onValueChange={(value) => update('hotelId', value)}>
+                  <SelectTrigger id="employee-hotel" className={fieldClass}>
+                    <SelectValue placeholder="Chọn khách sạn" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hotels.map((hotel) => (
+                      <SelectItem key={hotel.id} value={hotel.id}>
+                        {hotel.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </Field>
           </div>
+
+          <section className="flex flex-col gap-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+            <h3 className="text-sm font-semibold text-[#1F2A30]">Thông tin định danh & Cư trú</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Số CCCD" htmlFor="employee-citizen-id">
+                <Input
+                  id="employee-citizen-id"
+                  inputMode="numeric"
+                  value={draft.citizenId}
+                  onChange={(event) => update('citizenId', event.target.value)}
+                  placeholder="12 chữ số"
+                  className={`${fieldClass} bg-white`}
+                />
+              </Field>
+              <Field label="Ngày cấp" htmlFor="employee-citizen-issued-date">
+                <Input
+                  id="employee-citizen-issued-date"
+                  type="date"
+                  value={draft.citizenIdIssuedDate}
+                  onChange={(event) => update('citizenIdIssuedDate', event.target.value)}
+                  className={`${fieldClass} bg-white`}
+                />
+              </Field>
+              <Field label="Nơi cấp" htmlFor="employee-citizen-issued-place">
+                <Input
+                  id="employee-citizen-issued-place"
+                  value={draft.citizenIdIssuedPlace}
+                  onChange={(event) => update('citizenIdIssuedPlace', event.target.value)}
+                  placeholder="Cục Cảnh sát QLHC về TTXH"
+                  className={`${fieldClass} bg-white`}
+                />
+              </Field>
+              <Field label="Địa chỉ thường trú" htmlFor="employee-permanent-address">
+                <Textarea
+                  id="employee-permanent-address"
+                  rows={2}
+                  value={draft.permanentAddress}
+                  onChange={(event) => update('permanentAddress', event.target.value)}
+                  className="border-[#E2E8F0] bg-white focus-visible:ring-[#4F7284]"
+                />
+              </Field>
+            </div>
+          </section>
 
           {(validationError || errorMessage) && (
             <p role="alert" className="rounded-md border border-error/40 bg-error/5 px-4 py-3 text-sm text-error">

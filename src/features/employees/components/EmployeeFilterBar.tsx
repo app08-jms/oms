@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { HotelRef } from '@/features/auth/authRules';
 import {
   EMPLOYMENT_STATUSES,
   EMPLOYMENT_STATUS_LABELS,
@@ -12,6 +13,8 @@ import {
 
 interface EmployeeFilterBarProps {
   filters: EmployeeFilters;
+  hotels: HotelRef[];
+  hotelLocked: boolean;
   onFiltersChange: (filters: EmployeeFilters) => void;
 }
 
@@ -23,10 +26,33 @@ const ACCOUNT_OPTIONS: { value: AccountFilter; label: string }[] = [
 
 const selectTriggerClass = 'h-10 w-full border-[#E2E8F0] bg-white sm:w-[200px]';
 
-export function EmployeeFilterBar({ filters, onFiltersChange }: EmployeeFilterBarProps) {
+export function EmployeeFilterBar({ filters, hotels, hotelLocked, onFiltersChange }: EmployeeFilterBarProps) {
+  const lockedHotelName = hotels.find((hotel) => hotel.id === filters.hotelId)?.name ?? '';
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-[#E2E8F0] bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {hotelLocked ? (
+          <Input
+            readOnly
+            aria-label="Khách sạn"
+            value={lockedHotelName}
+            className={`${selectTriggerClass} bg-[#F8FAFC] text-[#1F2A30]`}
+          />
+        ) : (
+          <Select value={filters.hotelId} onValueChange={(value) => onFiltersChange({ ...filters, hotelId: value })}>
+            <SelectTrigger aria-label="Lọc theo khách sạn" className={selectTriggerClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả khách sạn</SelectItem>
+              {hotels.map((hotel) => (
+                <SelectItem key={hotel.id} value={hotel.id}>
+                  {hotel.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={filters.department} onValueChange={(value) => onFiltersChange({ ...filters, department: value })}>
           <SelectTrigger aria-label="Bộ phận" className={selectTriggerClass}>
             <SelectValue />
@@ -82,7 +108,7 @@ export function EmployeeFilterBar({ filters, onFiltersChange }: EmployeeFilterBa
         <Input
           type="search"
           aria-label="Tìm kiếm nhân viên"
-          placeholder="Tìm kiếm theo tên, mã NV, SĐT, Email..."
+          placeholder="Tìm kiếm theo tên, mã NV, CCCD, SĐT, Email..."
           value={filters.search}
           onChange={(event) => onFiltersChange({ ...filters, search: event.target.value })}
           className="h-10 border-[#E2E8F0] bg-white pl-9"

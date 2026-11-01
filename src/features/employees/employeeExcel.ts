@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import {
   EMPLOYMENT_STATUS_LABELS,
   EMPLOYMENT_STATUSES,
+  createEmptyDraft,
   normalizeDraft,
   validateDraft,
   type EmployeeDraft,
@@ -71,7 +72,7 @@ function parseEmploymentStatus(value: unknown): EmploymentStatus | null {
   return EMPLOYMENT_STATUSES.find((status) => EMPLOYMENT_STATUS_LABELS[status] === text) ?? null;
 }
 
-export async function parseEmployeeWorkbook(file: File): Promise<ImportParseResult> {
+export async function parseEmployeeWorkbook(file: File, hotelId: string): Promise<ImportParseResult> {
   const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0] ?? ''];
   if (!sheet) throw new Error('File không có dữ liệu.');
@@ -86,7 +87,7 @@ export async function parseEmployeeWorkbook(file: File): Promise<ImportParseResu
     const isBlank = COLUMNS.every((column) => String(raw[column.header] ?? '').trim() === '');
     if (isBlank) return;
 
-    const draft = {} as EmployeeDraft;
+    const draft = createEmptyDraft(hotelId);
     for (const column of COLUMNS) {
       const value = raw[column.header];
       if (column.key === 'probationDate' || column.key === 'officialDate') {
